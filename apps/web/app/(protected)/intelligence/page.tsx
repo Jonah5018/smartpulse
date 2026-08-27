@@ -36,6 +36,14 @@ import {
   MacroIntelligenceCard,
 } from "@/components/intelligence/macro-intelligence-card";
 
+import {
+  LiquidityHeatmapCard,
+} from "@/components/liquidity";
+
+import {
+  LoadLiquidityIntelligence,
+} from "@/lib/application/liquidity/load-liquidity-intelligence";
+
 
 interface IntelligencePageProps {
   searchParams: Promise<{
@@ -183,6 +191,11 @@ export default async function IntelligencePage({
 
     const macroAnalysis =
       await LoadMacroIntelligence.execute();
+    const liquidityAnalysis =
+      await LoadLiquidityIntelligence.execute(
+        symbol,
+        "15min"
+    );
 
   /*
    * ------------------------------------------------
@@ -555,12 +568,16 @@ export default async function IntelligencePage({
             decision={liveIntelligence.decision}
          />
 
+         <LiquidityHeatmapCard
+           analysis={liquidityAnalysis}
+         />
+
           <MacroIntelligenceCard
             analysis={macroAnalysis}
          />
 
-         <AIMarketBrief
-           brief={liveIntelligence.aiBrief}
+          <AIMarketBrief
+            brief={liveIntelligence.aiBrief}
          />
       </div>
 
