@@ -44,6 +44,13 @@ import {
   LoadLiquidityIntelligence,
 } from "@/lib/application/liquidity/load-liquidity-intelligence";
 
+import {
+  MarketRegimeCard,
+} from "@/components/regime";
+
+import {
+  LoadMarketRegime,
+} from "@/lib/application/regime/load-market-regime";
 
 interface IntelligencePageProps {
   searchParams: Promise<{
@@ -196,6 +203,9 @@ export default async function IntelligencePage({
         symbol,
         "15min"
     );
+
+    const regime =
+      await LoadMarketRegime.execute();
 
   /*
    * ------------------------------------------------
@@ -570,6 +580,10 @@ export default async function IntelligencePage({
 
          <LiquidityHeatmapCard
            analysis={liquidityAnalysis}
+         />
+
+         <MarketRegimeCard
+            regime={regime}
          />
 
           <MacroIntelligenceCard
