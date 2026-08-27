@@ -52,6 +52,18 @@ import {
   LoadMarketRegime,
 } from "@/lib/application/regime/load-market-regime";
 
+import {
+  ConfluenceMatrixCard,
+} from "@/components/confluence";
+
+import {
+  LoadConfluenceMatrix,
+} from "@/lib/application/confluence/load-confluence-matrix";
+
+import {
+  LoadMacroContext,
+} from "@/lib/application/macro-context/load-macro-context";
+
 interface IntelligencePageProps {
   searchParams: Promise<{
     symbol?: string;
@@ -204,8 +216,21 @@ export default async function IntelligencePage({
         "15min"
     );
 
+    const macroContext =
+      await LoadMacroContext.execute();
+
     const regime =
       await LoadMarketRegime.execute();
+    
+    const confluence =
+      liveIntelligence
+        ? LoadConfluenceMatrix.execute(
+            liveIntelligence.focus,
+            liquidityAnalysis,
+            regime,
+            macroContext
+         )
+         : null;
 
   /*
    * ------------------------------------------------
@@ -570,6 +595,11 @@ export default async function IntelligencePage({
           --------------------------------------- */
 
         <div className="space-y-6">
+          {confluence && (
+            <ConfluenceMatrixCard
+              matrix={confluence}
+           />
+      )}
           <MarketIntelligence
             symbol={liveIntelligence.symbol}
             setup={liveIntelligence.setup}
