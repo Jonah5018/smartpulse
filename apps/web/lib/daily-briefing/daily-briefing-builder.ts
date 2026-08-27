@@ -23,7 +23,7 @@ import type {
 } from "@/lib/macro";
 
 import {
-  macroBriefBuilder,
+  MacroBriefBuilder,
 } from "@/lib/macro";
 
 interface DailyBriefingMarketContext {
@@ -74,7 +74,7 @@ export class DailyBriefingBuilder {
       `Good ${this.dayPeriod()}, ${name}.`;
 
     const macroBrief =
-      macroBriefBuilder.build(macro);
+      MacroBriefBuilder.build(macro);
 
     if (!marketIsOpen) {
       return {
