@@ -8,7 +8,7 @@ export interface DailyBriefing {
 
   greeting: string;
 
-  focusScore: number;
+  focusScore: number | null;
 
   marketSummary: BriefingSection;
 

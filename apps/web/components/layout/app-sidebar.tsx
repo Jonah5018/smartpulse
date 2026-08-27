@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
 import {
   BarChart3,
   TrendingUp,
+  Star,
   BookOpen,
   Brain,
   CreditCard,
@@ -12,12 +14,47 @@ import {
 } from "lucide-react";
 
 const items = [
-  { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
-  { name: "Markets", href: "/markets", icon: TrendingUp },
-  { name: "Journal", href: "/journal", icon: BookOpen },
-{ name: "Pulse Intelligence", href: "/intelligence", icon: Brain },
-  { name: "Billing", href: "/billing", icon: CreditCard },
-  { name: "Settings", href: "/settings", icon: Settings },
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: BarChart3,
+  },
+
+  {
+    name: "Markets",
+    href: "/markets",
+    icon: TrendingUp,
+  },
+
+  {
+    name: "Watchlist",
+    href: "/watchlist",
+    icon: Star,
+  },
+
+  {
+    name: "Journal",
+    href: "/journal",
+    icon: BookOpen,
+  },
+
+  {
+    name: "Pulse Intelligence",
+    href: "/intelligence",
+    icon: Brain,
+  },
+
+  {
+    name: "Billing",
+    href: "/billing",
+    icon: CreditCard,
+  },
+
+  {
+    name: "Settings",
+    href: "/settings",
+    icon: Settings,
+  },
 ];
 
 export function AppSidebar() {
@@ -44,7 +81,12 @@ export function AppSidebar() {
       <nav className="flex flex-1 flex-col gap-2 p-4">
         {items.map((item) => {
           const Icon = item.icon;
-          const active = pathname === item.href;
+
+          const active =
+            pathname === item.href ||
+            pathname.startsWith(
+              `${item.href}/`
+            );
 
           return (
             <Link
@@ -52,7 +94,7 @@ export function AppSidebar() {
               href={item.href}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 transition ${
                 active
-                  ? "bg-blue-600/15 text-blue-400 border border-blue-900"
+                  ? "border border-blue-900 bg-blue-600/15 text-blue-400"
                   : "text-slate-300 hover:bg-slate-900"
               }`}
             >

@@ -14,8 +14,43 @@ import type {
   FocusAction,
   FocusPriority,
   FocusScore,
+  FocusScoreBreakdown,
   FocusScoreFactors,
 } from "./focus-score-types";
+
+
+/**
+ * Focus Score weights.
+ *
+ * The weights intentionally sum to 1.00.
+ *
+ * Opportunity confidence is currently the
+ * strongest available signal, while the remaining
+ * factors provide contextual confirmation.
+ */
+const FOCUS_SCORE_WEIGHTS = {
+  opportunity: 0.35,
+
+  setupReadiness: 0.15,
+
+  multiTimeframeAlignment: 0.12,
+
+  liquidity: 0.10,
+
+  displacement: 0.08,
+
+  entryQuality: 0.05,
+
+  riskReward: 0.05,
+
+  sessionQuality: 0.07,
+
+  calendarRisk: 0.03,
+} satisfies Record<
+  keyof FocusScoreFactors,
+  number
+>;
+
 
 export class FocusScoreEngine {
   static calculate(
@@ -30,9 +65,14 @@ export class FocusScoreEngine {
         calendarRisk
       );
 
+    const breakdown =
+      this.calculateBreakdown(
+        factors
+      );
+
     const score =
       this.calculateScore(
-        factors
+        breakdown
       );
 
     const priority =
@@ -76,11 +116,14 @@ export class FocusScoreEngine {
 
       factors,
 
+      breakdown,
+
       reason,
 
       warnings,
     };
   }
+
 
   private static calculateFactors(
     opportunity: Opportunity,
@@ -111,7 +154,7 @@ export class FocusScoreEngine {
         ),
 
       displacement:
-        this.structureScore(
+        this.displacementScore(
           opportunity
         ),
 
@@ -121,7 +164,9 @@ export class FocusScoreEngine {
         ),
 
       riskReward:
-        this.riskRewardScore(),
+        this.riskRewardScore(
+          opportunity
+        ),
 
       sessionQuality:
         this.sessionQuality(
@@ -135,38 +180,117 @@ export class FocusScoreEngine {
     };
   }
 
-  private static calculateScore(
+
+  /**
+   * Convert normalized factor scores into
+   * explainable contributions.
+   */
+  private static calculateBreakdown(
     factors: FocusScoreFactors
+  ): FocusScoreBreakdown {
+    return {
+      opportunity:
+        this.breakdownItem(
+          factors.opportunity,
+          FOCUS_SCORE_WEIGHTS.opportunity
+        ),
+
+      setupReadiness:
+        this.breakdownItem(
+          factors.setupReadiness,
+          FOCUS_SCORE_WEIGHTS.setupReadiness
+        ),
+
+      multiTimeframeAlignment:
+        this.breakdownItem(
+          factors.multiTimeframeAlignment,
+          FOCUS_SCORE_WEIGHTS.multiTimeframeAlignment
+        ),
+
+      liquidity:
+        this.breakdownItem(
+          factors.liquidity,
+          FOCUS_SCORE_WEIGHTS.liquidity
+        ),
+
+      displacement:
+        this.breakdownItem(
+          factors.displacement,
+          FOCUS_SCORE_WEIGHTS.displacement
+        ),
+
+      entryQuality:
+        this.breakdownItem(
+          factors.entryQuality,
+          FOCUS_SCORE_WEIGHTS.entryQuality
+        ),
+
+      riskReward:
+        this.breakdownItem(
+          factors.riskReward,
+          FOCUS_SCORE_WEIGHTS.riskReward
+        ),
+
+      sessionQuality:
+        this.breakdownItem(
+          factors.sessionQuality,
+          FOCUS_SCORE_WEIGHTS.sessionQuality
+        ),
+
+      calendarRisk:
+        this.breakdownItem(
+          factors.calendarRisk,
+          FOCUS_SCORE_WEIGHTS.calendarRisk
+        ),
+    };
+  }
+
+
+  private static breakdownItem(
+    rawScore: number,
+    weight: number
+  ) {
+    return {
+      rawScore,
+
+      weight,
+
+      contribution:
+        Number(
+          (
+            rawScore *
+            weight
+          ).toFixed(2)
+        ),
+    };
+  }
+
+
+  private static calculateScore(
+    breakdown: FocusScoreBreakdown
   ): number {
-    /*
-     * Opportunity confidence is currently
-     * the strongest available signal.
-     *
-     * The other factors provide context.
-     *
-     * We deliberately avoid pretending that
-     * FVG, displacement, R:R or entry zones
-     * exist in the current Opportunity contract.
-     */
-    const weighted =
-      factors.opportunity * 0.35 +
-      factors.setupReadiness * 0.15 +
-      factors.multiTimeframeAlignment * 0.12 +
-      factors.liquidity * 0.10 +
-      factors.displacement * 0.08 +
-      factors.entryQuality * 0.05 +
-      factors.riskReward * 0.05 +
-      factors.sessionQuality * 0.07 +
-      factors.calendarRisk * 0.03;
+    const total =
+      Object.values(
+        breakdown
+      ).reduce(
+        (
+          sum,
+          factor
+        ) =>
+          sum +
+          factor.contribution,
+        0
+      );
 
     return Math.round(
       this.clamp(
-        weighted,
+        total,
         0,
         100
       )
     );
   }
+
 
   private static setupReadiness(
     opportunity: Opportunity
@@ -191,13 +315,10 @@ export class FocusScoreEngine {
     }
   }
 
+
   private static biasAlignment(
     opportunity: Opportunity
   ): number {
-    /*
-     * Directional opportunity and higher
-     * timeframe bias agree.
-     */
     if (
       opportunity.direction ===
         "buy" &&
@@ -216,11 +337,6 @@ export class FocusScoreEngine {
       return 100;
     }
 
-    /*
-     * Neutral higher-timeframe context does
-     * NOT automatically invalidate a lower
-     * timeframe opportunity.
-     */
     if (
       opportunity.higherTimeframeBias ===
       "neutral"
@@ -228,12 +344,9 @@ export class FocusScoreEngine {
       return 65;
     }
 
-    /*
-     * Direction exists but does not agree with
-     * the available higher-timeframe context.
-     */
     return 35;
   }
+
 
   private static liquidityScore(
     opportunity: Opportunity
@@ -256,40 +369,56 @@ export class FocusScoreEngine {
     return 35;
   }
 
-  private static structureScore(
+
+  /**
+   * Use the actual displacement signal
+   * already exposed by Opportunity.
+   */
+  private static displacementScore(
     opportunity: Opportunity
   ): number {
-    /*
-     * At the current architecture stage,
-     * the Opportunity already contains the
-     * structure produced by Market Structure.
-     *
-     * We therefore use the existence of a
-     * meaningful structure description as
-     * supporting evidence rather than inventing
-     * a displacement field.
-     */
     if (
-      opportunity.structure &&
-      opportunity.structure !==
-        "unknown"
+      opportunity.displacement
     ) {
-      return 80;
+      return 100;
+    }
+
+    if (
+      opportunity.structureEvent ===
+        "bos" ||
+      opportunity.structureEvent ===
+        "mss" ||
+      opportunity.structureEvent ===
+        "choch"
+    ) {
+      return 75;
     }
 
     return 35;
   }
 
+
+  /**
+   * Use the actual entry zone exposed
+   * by Opportunity.
+   */
   private static entryQualityScore(
     opportunity: Opportunity
   ): number {
-    /*
-     * Entry-zone analysis has not yet been
-     * exposed through Opportunity.
-     *
-     * Keep this neutral rather than pretending
-     * an entry area has been confirmed.
-     */
+    if (
+      opportunity.entryZone &&
+      opportunity.invalidation !==
+        null
+    ) {
+      return 100;
+    }
+
+    if (
+      opportunity.entryZone
+    ) {
+      return 75;
+    }
+
     if (
       opportunity.state ===
       "ready"
@@ -307,16 +436,58 @@ export class FocusScoreEngine {
     return 25;
   }
 
-  private static riskRewardScore(): number {
-    /*
-     * Risk/reward is not yet exposed by the
-     * current Opportunity contract.
-     *
-     * Neutral score until Institutional Setup
-     * provides a validated R:R calculation.
-     */
-    return 50;
+
+  /**
+   * Use the validated Risk/Reward data
+   * already exposed by Opportunity.
+   */
+  private static riskRewardScore(
+    opportunity: Opportunity
+  ): number {
+    const ratio =
+      opportunity.riskReward
+        ?.ratio;
+
+    if (
+      ratio === undefined ||
+      !Number.isFinite(ratio)
+    ) {
+      return 50;
+    }
+
+    if (
+      ratio >= 4
+    ) {
+      return 100;
+    }
+
+    if (
+      ratio >= 3
+    ) {
+      return 90;
+    }
+
+    if (
+      ratio >= 2
+    ) {
+      return 80;
+    }
+
+    if (
+      ratio >= 1.5
+    ) {
+      return 65;
+    }
+
+    if (
+      ratio >= 1
+    ) {
+      return 45;
+    }
+
+    return 20;
   }
+
 
   private static sessionQuality(
     session: SessionStatus
@@ -336,14 +507,14 @@ export class FocusScoreEngine {
 
     if (
       session.overlap ===
-      "sydney_tokyo"
+        "sydney_tokyo"
     ) {
       return 70;
     }
 
     if (
       session.overlap ===
-      "tokyo_london"
+        "tokyo_london"
     ) {
       return 70;
     }
@@ -371,6 +542,7 @@ export class FocusScoreEngine {
     }
   }
 
+
   private static calendarRiskScore(
     risk: EconomicCalendarRisk
   ): number {
@@ -397,6 +569,7 @@ export class FocusScoreEngine {
     }
   }
 
+
   private static getPriority(
     score: number,
     opportunity: Opportunity
@@ -408,24 +581,33 @@ export class FocusScoreEngine {
       return "ignore";
     }
 
-    if (score >= 90) {
+    if (
+      score >= 90
+    ) {
       return "critical";
     }
 
-    if (score >= 80) {
+    if (
+      score >= 80
+    ) {
       return "high";
     }
 
-    if (score >= 65) {
+    if (
+      score >= 65
+    ) {
       return "watch";
     }
 
-    if (score >= 45) {
+    if (
+      score >= 45
+    ) {
       return "low";
     }
 
     return "ignore";
   }
+
 
   private static getAction(
     score: number,
@@ -470,6 +652,7 @@ export class FocusScoreEngine {
 
     return "monitor";
   }
+
 
   private static buildWarnings(
     opportunity: Opportunity,
@@ -530,6 +713,14 @@ export class FocusScoreEngine {
     }
 
     if (
+      !opportunity.riskReward
+    ) {
+      warnings.push(
+        "Validated risk/reward information is not currently available."
+      );
+    }
+
+    if (
       calendarRisk.hasRisk &&
       calendarRisk.impact ===
         "high"
@@ -541,6 +732,7 @@ export class FocusScoreEngine {
 
     return warnings;
   }
+
 
   private static buildReason(
     opportunity: Opportunity,
@@ -596,6 +788,22 @@ export class FocusScoreEngine {
     }
 
     if (
+      opportunity.displacement
+    ) {
+      parts.push(
+        `Displacement is ${opportunity.displacement}.`
+      );
+    }
+
+    if (
+      opportunity.riskReward
+    ) {
+      parts.push(
+        `Validated risk/reward is ${opportunity.riskReward.ratio.toFixed(2)}R.`
+      );
+    }
+
+    if (
       opportunity.higherTimeframeBias ===
       "neutral"
     ) {
@@ -623,6 +831,7 @@ export class FocusScoreEngine {
     );
   }
 
+
   private static liquiditySweepLabel(
     sweep:
       | "buy_side"
@@ -633,6 +842,7 @@ export class FocusScoreEngine {
       ? "Buy-side"
       : "Sell-side";
   }
+
 
   private static actionLabel(
     action: FocusAction
@@ -660,6 +870,7 @@ export class FocusScoreEngine {
         return "monitor";
     }
   }
+
 
   private static clamp(
     value: number,

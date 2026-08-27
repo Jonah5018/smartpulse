@@ -41,6 +41,10 @@ export interface MarketQuote {
   timestamp: string;
 }
 
+/**
+ * Compatibility alias used by the market provider
+ * and existing market-session integration.
+ */
 import type {
   SessionStatus,
 } from "@/lib/market-session";
@@ -49,7 +53,7 @@ export type MarketSessionStatus =
   SessionStatus;
 
 export interface MarketPulse {
-  score: number;
+  score: number | null;
 
   trend: TrendDirection;
 
@@ -58,4 +62,16 @@ export interface MarketPulse {
   confidence: number;
 
   summary: string;
+
+  /**
+   * True only when the pulse represents
+   * currently active market conditions.
+   */
+  isLive: boolean;
+
+  /**
+   * Session context used to determine whether
+   * the pulse is currently valid.
+   */
+  session: SessionStatus;
 }

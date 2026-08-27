@@ -11,10 +11,6 @@ import {
 } from "@/lib/market-structure";
 
 import {
-  LiquidityEngine,
-} from "@/lib/liquidity";
-
-import {
   ImbalanceEngine,
 } from "@/lib/imbalance";
 
@@ -33,7 +29,15 @@ import type {
 
 import type {
   LiquidityAnalysis,
-} from "@/lib/liquidity";
+} from "@/lib/institutional/liquidity";
+
+import {
+  LiquidityEngine,
+} from "@/lib/institutional/liquidity";
+
+import type {
+  LiquidityMap,
+} from "@/lib/institutional/liquidity";
 
 import type {
   MarketStructureAnalysis,
@@ -46,6 +50,34 @@ import type {
   SetupQuality,
   SetupState,
 } from "./institutional-setup-types";
+
+import {
+  MarketAvailabilityService,
+} from "@/lib/market-session/market-availability-service";
+
+import {
+  MSSEngine,
+} from "@/lib/institutional/mss";
+
+import {
+  OrderBlockEngine,
+} from "@/lib/institutional/order-block";
+
+import {
+  PremiumDiscountEngine,
+} from "@/lib/institutional/premium-discount";
+
+import {
+  DisplacementEngine,
+} from "@/lib/institutional/displacement";
+
+import {
+  ConfluenceEngine,
+} from "@/lib/institutional/confluence";
+
+import {
+  ExplainabilityEngine,
+} from "@/lib/institutional/explainability";
 
 export class InstitutionalSetupEngine {
   /**
@@ -87,38 +119,77 @@ export class InstitutionalSetupEngine {
     outputsize: number = 200,
     profile?: TraderAnalysisProfile
   ): Promise<InstitutionalSetup> {
+    const normalizedSymbol =
+      symbol.trim().toUpperCase();
+
+    if (!normalizedSymbol) {
+      throw new Error(
+        "Market symbol is required."
+      );
+    }
+
     const analysisProfile =
       profile ??
       this.profileFromLegacyTimeframe(
         timeframe
       );
+      
+    const availability =
+      MarketAvailabilityService.current(
+        normalizedSymbol
+      );
+
+    if (!availability.isOpen) {
+      return this.noSetup(
+        normalizedSymbol,
+        analysisProfile,
+        `${normalizedSymbol}: ${availability.reason} Live institutional analysis will resume when the market reopens.`
+      );
+    }
 
     const executionTimeframe =
       analysisProfile.timeframes.execution;
 
-    const [
+    const candles =
+      await MarketRepository.getCandles(
+        symbol,
+        executionTimeframe,
+        outputsize
+      );
+
+    const executionStructure =
+      await MarketStructureService.current(
+        symbol,
+        executionTimeframe,
+        outputsize
+      );
+
+    const displacement =
+      DisplacementEngine.analyze(
+        candles,
+        executionStructure
+      );
+
+    const premiumDiscount =
+      PremiumDiscountEngine.analyze(
       candles,
-      executionStructure,
+       executionStructure
+    );
+
+    const orderBlock =
+      OrderBlockEngine.analyze(
+        candles,
+        executionStructure
+ );
+
+    const [
       liquidity,
       imbalance,
       multiTimeframe,
     ] = await Promise.all([
-      MarketRepository.getCandles(
-        symbol,
-        executionTimeframe,
-        outputsize
-      ),
-
-      MarketStructureService.current(
-        symbol,
-        executionTimeframe,
-        outputsize
-      ),
-
-      LiquidityEngine.current(
-        symbol,
-        executionTimeframe,
-        outputsize
+      LiquidityEngine.analyze(
+        candles,
+        executionStructure,
       ),
 
       ImbalanceEngine.current(
@@ -168,6 +239,7 @@ export class InstitutionalSetupEngine {
 
     const sweepDirection =
       liquidity.latestSweep
+        && liquidity.latestSweep.side !== null
         ? this.getSweepDirection(
             liquidity.latestSweep.side
           )
@@ -210,6 +282,18 @@ export class InstitutionalSetupEngine {
         direction,
         liquidity,
         currentPrice
+      );
+
+    const confluence =
+      ConfluenceEngine.evaluate(
+        executionStructure as unknown as Parameters<
+          typeof ConfluenceEngine.evaluate
+        >[0],
+        liquidity,
+        orderBlock,
+        selectedFVG,
+        premiumDiscount,
+        displacement
       );
 
     const entryZone =
@@ -277,50 +361,35 @@ export class InstitutionalSetupEngine {
       );
 
     const confidence =
-      this.calculateConfidence(
-        multiTimeframe.confidence,
-        executionStructure.confidence,
-        liquidity.confidence,
-        imbalance.confidence,
-        directionalAlignment,
-        selectedFVG !== null,
-        riskReward !== null,
-        setupContext
-      );
+      confluence.score;
 
     const quality =
-      this.getQuality(
-        confidence,
-        riskReward
-      );
+      confluence.grade === "A+"
+        ? "exceptional"
+        : confluence.grade === "A"
+          ? "high"
+          : confluence.grade === "B"
+            ? "moderate"
+            : "low";
+
+    const liquidityMap: LiquidityMap =
+      liquidity;
+
+    const explanationModel =
+      ExplainabilityEngine.generate(
+        confluence,
+        executionStructure as any,
+        liquidityMap,
+        orderBlock,
+        selectedFVG,
+        displacement
+   );
 
     const summary =
-      this.buildSummary(
-        symbol,
-        state,
-        direction,
-        setupContext,
-        multiTimeframe,
-        selectedFVG,
-        targetLiquidity?.price ??
-          null,
-        riskReward
-      );
+      explanationModel.headline;
 
     const explanation =
-      this.buildExplanation(
-        direction,
-        setupContext,
-        multiTimeframe,
-        executionStructure,
-        liquidity,
-        imbalance.summary,
-        selectedFVG,
-        targetLiquidity?.price ??
-          null,
-        riskReward,
-        state
-      );
+      explanationModel.narrative;
 
     return {
       symbol,
@@ -335,6 +404,11 @@ export class InstitutionalSetupEngine {
       quality,
 
       confidence,
+
+      confluence,
+
+      explainability:
+        explanationModel,
 
       marketStructure:
         executionStructure.trend,
@@ -358,6 +432,8 @@ export class InstitutionalSetupEngine {
       multiTimeframeAlignment:
         multiTimeframe.alignment,
 
+      liquidity: liquidityMap,
+
       liquiditySweep:
         liquidity.latestSweep
           ?.side ?? null,
@@ -372,8 +448,7 @@ export class InstitutionalSetupEngine {
 
       riskReward,
 
-      displacement:
-        displacementDirection,
+      displacement,
 
       fairValueGap:
         entryZone,
@@ -1141,7 +1216,7 @@ export class InstitutionalSetupEngine {
 
     if (riskReward) {
       parts.push(
-        `Potential R:R ${riskReward.ratio}:1.`
+        `Potential R:R 1:${riskReward.ratio}.`
       );
     }
 
@@ -1214,7 +1289,7 @@ export class InstitutionalSetupEngine {
 
     if (riskReward) {
       sections.push(
-        `RISK/REWARD: ${riskReward.ratio}:1 potential.`
+        `RISK/REWARD: 1:${riskReward.ratio} potential.`
       );
     }
 
@@ -1269,6 +1344,33 @@ export class InstitutionalSetupEngine {
 
       confidence: 0,
 
+      confluence: {
+        score: 0,
+        grade: "C",
+        confirmations: 0,
+        breakdown: {
+          structure: 0,
+          liquidity: 0,
+          orderBlock: 0,
+          fairValueGap: 0,
+          premiumDiscount: 0,
+          displacement: 0,
+        },
+        valid: false,
+      },
+
+      explainability: {
+        headline:
+          "No institutional setup",
+
+        narrative:
+          reason,
+
+        confirmations: [],
+
+        warnings: [],
+      },
+
       marketStructure: "range",
 
       structureEvent: "none",
@@ -1288,6 +1390,13 @@ export class InstitutionalSetupEngine {
 
       multiTimeframeAlignment:
         "range_context",
+      liquidity: {
+        nearestBuySide: null,
+        nearestSellSide: null,
+        latestSweep: null,
+        confidence: 0,
+        summary: reason,
+      } as unknown as LiquidityAnalysis,
 
       liquiditySweep: null,
 
@@ -1299,7 +1408,8 @@ export class InstitutionalSetupEngine {
 
       riskReward: null,
 
-      displacement: null,
+      displacement:
+        null as unknown as InstitutionalSetup["displacement"],
 
       fairValueGap: null,
 

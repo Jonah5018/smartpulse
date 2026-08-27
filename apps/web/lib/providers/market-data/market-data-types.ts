@@ -3,10 +3,20 @@ export interface LiveMarketQuote {
 
   name: string;
 
-  bid: number;
+  /**
+   * Twelve Data's current quote endpoint
+   * does not provide an executable bid/ask pair.
+   *
+   * These remain nullable until SmartPulse
+   * integrates a genuine bid/ask source.
+   */
+  bid: number | null;
 
-  ask: number;
+  ask: number | null;
 
+  /**
+   * Latest available market price.
+   */
   price: number;
 
   changePercent: number;

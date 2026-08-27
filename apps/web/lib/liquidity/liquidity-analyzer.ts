@@ -53,6 +53,8 @@ export class LiquidityAnalyzer {
 
         nearestSellSide: null,
 
+        highestPriority: null,
+
         latestSweep: null,
 
         confidence: 0,
@@ -126,6 +128,9 @@ export class LiquidityAnalyzer {
       nearestBuySide,
 
       nearestSellSide,
+
+      highestPriority:
+        pools[0] ?? null,
 
       latestSweep,
 
@@ -209,7 +214,10 @@ export class LiquidityAnalyzer {
     candidates: LiquidityCandidate[],
     candles: MarketCandle[]
   ): LiquidityPool[] {
-    const pools: LiquidityPool[] = [];
+    const pools: Omit<
+      LiquidityPool,
+      "distance" | "targetScore" | "heat"
+    >[] = [];
 
     const groupedBySide: Record<
       LiquiditySide,
@@ -375,10 +383,41 @@ export class LiquidityAnalyzer {
       }
     }
 
-    return pools.sort(
+         const currentPrice =
+           candles[candles.length - 1].close;
+
+          const enriched =
+            pools.map((pool) => {
+             const distance =
+               Math.abs(pool.price - currentPrice);
+
+              const targetScore =
+                Math.round(
+                  pool.strength -
+                  distance * 10000
+           );
+
+              return {
+                ...pool,
+
+                distance,
+
+                targetScore,
+
+                heat:
+                  (targetScore >= 80
+                    ? "hot"
+                    : targetScore >= 60
+                    ? "warm"
+                    : "cold") as LiquidityPool["heat"],
+         };
+      });
+
+    return enriched.sort(
       (a, b) =>
-        b.strength - a.strength
-    );
+        b.targetScore -
+        a.targetScore
+   );
   }
 
   private static findNearestPool(
@@ -647,6 +686,9 @@ export class LiquidityAnalyzer {
       LiquiditySweep | null
   ): string {
     const parts: string[] = [];
+    const priority =
+      nearestBuySide?.targetScore ??
+      nearestSellSide?.targetScore;
 
     if (nearestBuySide) {
       parts.push(

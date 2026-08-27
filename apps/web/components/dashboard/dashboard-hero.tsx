@@ -1,79 +1,151 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import type {
+  SessionStatus,
+} from "@/lib/market-session";
 
 type DashboardHeroProps = {
   profile: {
     first_name?: string | null;
   };
+
+  session: SessionStatus;
 };
 
-function getGreeting(date: Date) {
-  const hour = date.getHours();
+function getGreeting(
+  date: Date
+) {
+  const hour =
+    date.getHours();
 
-  if (hour < 12) return "Good Morning";
-  if (hour < 17) return "Good Afternoon";
-  if (hour < 21) return "Good Evening";
+  if (hour < 12) {
+    return "Good Morning";
+  }
+
+  if (hour < 17) {
+    return "Good Afternoon";
+  }
+
+  if (hour < 21) {
+    return "Good Evening";
+  }
 
   return "Welcome Back";
 }
 
-function getMarketSession(date: Date) {
-  const hour = date.getHours();
-
-  if (hour >= 7 && hour < 16) {
+function getSessionPresentation(
+  session: SessionStatus
+) {
+  if (!session.isOpen) {
     return {
-      label: "London Session Active",
-      color: "text-green-500",
+      label: "Markets Closed",
+
+      color:
+        "text-slate-400",
     };
   }
 
-  if (hour >= 13 && hour < 22) {
-    return {
-      label: "New York Session Active",
-      color: "text-blue-500",
-    };
-  }
+  switch (session.current) {
+    case "sydney":
+      return {
+        label:
+          "Sydney Session Active",
 
-  if (hour >= 0 && hour < 9) {
-    return {
-      label: "Asian Session Active",
-      color: "text-yellow-500",
-    };
-  }
+        color:
+          "text-yellow-500",
+      };
 
-  return {
-    label: "Markets Closed",
-    color: "text-slate-400",
-  };
+    case "tokyo":
+      return {
+        label:
+          "Tokyo Session Active",
+
+        color:
+          "text-yellow-500",
+      };
+
+    case "london":
+      return {
+        label:
+          "London Session Active",
+
+        color:
+          "text-green-500",
+      };
+
+    case "new_york":
+      return {
+        label:
+          "New York Session Active",
+
+        color:
+          "text-blue-500",
+      };
+
+    default:
+      return {
+        label:
+          "Markets Closed",
+
+        color:
+          "text-slate-400",
+      };
+  }
 }
 
-export function DashboardHero({ profile }: DashboardHeroProps) {
-  const [time, setTime] = useState("");
-  const [greeting, setGreeting] = useState("");
+export function DashboardHero({
+  profile,
+  session,
+}: DashboardHeroProps) {
+  const [time, setTime] =
+    useState("");
+
+  const [greeting, setGreeting] =
+    useState("");
 
   useEffect(() => {
     const updateClock = () => {
-      const now = new Date();
+      const now =
+        new Date();
 
-      setGreeting(getGreeting(now));
+      setGreeting(
+        getGreeting(now)
+      );
 
       setTime(
-        now.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
+        now.toLocaleTimeString(
+          [],
+          {
+            hour: "2-digit",
+            minute: "2-digit",
+          }
+        )
       );
     };
 
     updateClock();
 
-    const interval = setInterval(updateClock, 60000);
+    const interval =
+      setInterval(
+        updateClock,
+        60000
+      );
 
-    return () => clearInterval(interval);
+    return () =>
+      clearInterval(
+        interval
+      );
   }, []);
 
-  const session = getMarketSession(new Date());
+  const sessionPresentation =
+    getSessionPresentation(
+      session
+    );
 
   return (
     <section className="rounded-3xl border border-slate-800 bg-gradient-to-r from-slate-900 to-slate-950 p-8">
@@ -85,7 +157,8 @@ export function DashboardHero({ profile }: DashboardHeroProps) {
 
           <h1 className="mt-4 text-5xl font-bold">
             {greeting},{" "}
-            {profile.first_name?.trim() || "Trader"}
+            {profile.first_name?.trim() ||
+              "Trader"}
           </h1>
 
           <p className="mt-4 max-w-2xl text-slate-400">
@@ -103,8 +176,10 @@ export function DashboardHero({ profile }: DashboardHeroProps) {
             {time || "--:--"}
           </p>
 
-          <p className={`mt-2 ${session.color}`}>
-            {session.label}
+          <p
+            className={`mt-2 ${sessionPresentation.color}`}
+          >
+            {sessionPresentation.label}
           </p>
         </div>
       </div>

@@ -1,0 +1,31 @@
+import {
+  defineConfig,
+} from "vitest/config";
+
+import {
+  resolve,
+} from "node:path";
+
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      "@":
+        resolve(
+          __dirname,
+          "."
+        ),
+    },
+  },
+
+  test: {
+    environment: "node",
+
+    globals: true,
+
+    include: [
+      "lib/**/*.test.ts",
+      "lib/**/*.spec.ts",
+    ],
+  },
+});

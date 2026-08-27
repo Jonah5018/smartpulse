@@ -1,7 +1,13 @@
-import { MarketSessionEngine } from "./market-session-engine";
+import {
+  MarketSessionEngine,
+} from "./market-session-engine";
 
 export class MarketSessionService {
-  static current() {
-    return MarketSessionEngine.current();
+  static current(
+    date = new Date()
+  ) {
+    return MarketSessionEngine.current(
+      date
+    );
   }
 }

@@ -9,6 +9,10 @@ interface MarketPulseCardProps {
 export function MarketPulseCard({
   pulse,
 }: MarketPulseCardProps) {
+  const isLive =
+    pulse.isLive &&
+    pulse.score !== null;
+
   const trendLabel =
     pulse.trend === "bullish"
       ? "Bullish Conditions"
@@ -31,13 +35,29 @@ export function MarketPulseCard({
             Market Pulse
           </p>
 
-          <h2 className="mt-2 text-4xl font-bold">
-            {pulse.score}
-          </h2>
+          {isLive ? (
+            <>
+              <h2 className="mt-2 text-4xl font-bold">
+                {pulse.score}
+              </h2>
 
-          <p className={`mt-2 ${trendClass}`}>
-            {trendLabel}
-          </p>
+              <p
+                className={`mt-2 ${trendClass}`}
+              >
+                {trendLabel}
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="mt-2 text-4xl font-bold">
+                —
+              </h2>
+
+              <p className="mt-2 text-slate-400">
+                Market Closed
+              </p>
+            </>
+          )}
         </div>
 
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600/20">
@@ -47,24 +67,32 @@ export function MarketPulseCard({
         </div>
       </div>
 
-      <div className="mt-6 h-2 rounded-full bg-slate-800">
-        <div
-          className="h-2 rounded-full bg-blue-600 transition-all"
-          style={{
-            width: `${pulse.score}%`,
-          }}
-        />
-      </div>
+      {isLive ? (
+        <>
+          <div className="mt-6 h-2 rounded-full bg-slate-800">
+            <div
+              className="h-2 rounded-full bg-blue-600 transition-all"
+              style={{
+                width: `${pulse.score}%`,
+              }}
+            />
+          </div>
 
-      <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
-        <span>
-          Confidence: {pulse.confidence}%
-        </span>
+          <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
+            <span>
+              Confidence:{" "}
+              {pulse.confidence}%
+            </span>
 
-        <span>
-          Volatility: {pulse.volatility}
-        </span>
-      </div>
+            <span>
+              Volatility:{" "}
+              {pulse.volatility}
+            </span>
+          </div>
+        </>
+      ) : (
+        <div className="mt-6 h-2 rounded-full bg-slate-800" />
+      )}
 
       <p className="mt-3 text-sm text-slate-400">
         {pulse.summary}

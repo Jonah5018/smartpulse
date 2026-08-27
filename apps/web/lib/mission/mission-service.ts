@@ -1,7 +1,11 @@
 import { MissionEngine } from "./mission-engine";
 
 export class MissionService {
-  static current() {
-    return MissionEngine.current();
+  static current(
+    symbol: string
+  ) {
+    return MissionEngine.current(
+      symbol
+    );
   }
 }

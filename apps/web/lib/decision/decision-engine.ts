@@ -573,7 +573,7 @@ export class DecisionEngine {
       2
     ) {
       warnings.push(
-        `Current risk/reward is ${setup.riskReward.ratio}:1, below the preferred 2:1 threshold.`
+        `Current risk/reward is 1:${setup.riskReward.ratio}, below the preferred 1:2 threshold.`
       );
     }
 

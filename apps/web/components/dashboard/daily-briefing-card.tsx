@@ -6,11 +6,18 @@ import {
 } from "@/components/ui/card";
 
 interface DailyBriefingCardProps {
-  focusScore: number;
+  focusScore:
+    | number
+    | null;
+
   marketSummary: string;
+
   mission: string;
+
   opportunity: string;
+
   risk: string;
+
   growth: string;
 }
 
@@ -43,8 +50,14 @@ export function DailyBriefingCard({
           </p>
 
           <p className="text-5xl font-bold text-blue-500">
-            {focusScore}
+            {focusScore ?? "—"}
           </p>
+
+          {focusScore === null && (
+            <p className="mt-1 text-sm text-slate-500">
+              No active market score
+            </p>
+          )}
         </div>
       </CardHeader>
 

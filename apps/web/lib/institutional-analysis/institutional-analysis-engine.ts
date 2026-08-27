@@ -168,7 +168,7 @@ export class InstitutionalAnalysisEngine {
       "Displacement",
       displacementConfirmed,
       displacementConfirmed
-        ? `${setup.displacement === "bullish" ? "Bullish" : "Bearish"} displacement is present on the execution analysis.`
+        ? `${setup.displacement.direction === "bullish" ? "Bullish" : "Bearish"} displacement is present on the execution analysis.`
         : "No directional displacement is currently confirmed.",
       5
     );
@@ -212,7 +212,7 @@ export class InstitutionalAnalysisEngine {
       riskRewardDefined &&
         riskRewardAcceptable,
       riskRewardDefined
-        ? `Current potential risk-to-reward is ${setup.riskReward?.ratio}:1.`
+        ? `Current potential risk-to-reward is 1:${setup.riskReward?.ratio}.`
         : "A complete risk-to-reward calculation is not currently available.",
       5
     );
@@ -598,7 +598,7 @@ export class InstitutionalAnalysisEngine {
       setup.riskReward
     ) {
       return (
-        `High-quality ${setup.direction === "buy" ? "bullish" : "bearish"} setup. Potential R:R is ${setup.riskReward.ratio}:1. Wait for the defined entry area and respect the invalidation level at ${setup.invalidation}.`
+        `High-quality ${setup.direction === "buy" ? "bullish" : "bearish"} setup. Potential R:R is 1:${setup.riskReward.ratio}. Wait for the defined entry area and respect the invalidation level at ${setup.invalidation}.`
       );
     }
 

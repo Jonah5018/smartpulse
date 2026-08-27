@@ -2,118 +2,198 @@ import type {
   DailyBriefing,
 } from "./daily-briefing-types";
 
-import {
-  MissionService,
-} from "@/lib/mission";
+import type {
+  SessionStatus,
+} from "@/lib/market-session";
 
-import {
-  ContextService,
-} from "@/lib/context";
-
-import {
-  OpportunityService,
+import type {
+  Opportunity,
 } from "@/lib/opportunity";
 
+import type {
+  FocusScore,
+} from "@/lib/focus-score";
+
+import type {
+  MarketSelection,
+} from "@/lib/market-selection";
+
+import type {
+  MacroAnalysisResult,
+} from "@/lib/macro";
+
 import {
-  MarketStructureService,
-} from "@/lib/market-structure";
+  macroBriefBuilder,
+} from "@/lib/macro";
+
+interface DailyBriefingMarketContext {
+  session: SessionStatus;
+
+  topFocus:
+    | FocusScore
+    | null;
+
+  opportunities:
+    Record<
+      string,
+      Opportunity
+    >;
+
+  marketSelection: MarketSelection;
+}
 
 export class DailyBriefingBuilder {
-  static async build(
-    name: string
-  ): Promise<DailyBriefing> {
-    const context =
-      ContextService.current();
+  static build(
+    name: string,
+    market: DailyBriefingMarketContext,
+    macro: MacroAnalysisResult
+  ): DailyBriefing {
+    const {
+      session,
+      topFocus,
+      marketSelection,
+    } = market;
 
-    const [
-      mission,
-      structure,
-      opportunity,
-    ] = await Promise.all([
-      MissionService.current(),
+    const selectedCandidate =
+      marketSelection.bestOpportunity;
 
-      MarketStructureService.current(
-        "GBP/USD",
-        "15min",
-        200
-      ),
+    const opportunity =
+      selectedCandidate?.opportunity ??
+      null;
 
-      OpportunityService.current(
-        "GBP/USD"
-      ),
-    ]);
+    const marketIsOpen =
+      session.isOpen;
+
+    const focusScore =
+      marketIsOpen &&
+      topFocus
+        ? topFocus.score
+        : null;
+
+    const greeting =
+      `Good ${this.dayPeriod()}, ${name}.`;
+
+    const macroBrief =
+      macroBriefBuilder.build(macro);
+
+    if (!marketIsOpen) {
+      return {
+        generatedAt:
+          new Date().toISOString(),
+
+        greeting,
+
+        focusScore: null,
+
+        marketSummary: {
+          title: "Market Summary",
+          content:
+            `${session.description} Live institutional analysis is paused until the next trading session.`,
+        },
+
+        mission: {
+          title:
+            "Today's Trading Mission",
+          content:
+            "Prepare your watchlist and review your trading plan before the next trading session.",
+        },
+
+        opportunity: {
+          title:
+            "Best Opportunity",
+          content:
+            "No live opportunity is currently available because the market is closed.",
+        },
+
+        risk: {
+          title: "Risk Alert",
+          content:
+            "The market is currently closed. Do not treat the last available market data as a current trading opportunity.",
+        },
+
+        growth: {
+          title:
+            "Growth Insight",
+          content:
+            "Use the closed-market period to review previous setups, refine your risk management, and prepare for the next session.",
+        },
+
+        economicEvents: {
+          title:
+            "Economic Events",
+          content:
+            `${macroBrief.headline} ${macroBrief.summary}`,
+        },
+
+        closing:
+          "Protect capital first. Prepare carefully and wait for the next valid market opportunity.",
+      };
+    }
+
+    const opportunitySummary =
+      opportunity
+        ? `${opportunity.symbol} is currently ${opportunity.state} with ${opportunity.confidence}% confidence.`
+        : "No qualifying live opportunity is currently available.";
+
+    const structureSummary =
+      opportunity
+        ? `Current market structure: ${opportunity.structure}. Higher-timeframe bias: ${opportunity.higherTimeframeBias}.`
+        : "No qualifying institutional market structure is currently available.";
+
+    const sourceLabel =
+      selectedCandidate?.source ===
+      "discovery"
+        ? "SmartPulse Discovery"
+        : "Watchlist Opportunity";
 
     return {
       generatedAt:
         new Date().toISOString(),
 
-      greeting:
-        `Good ${this.dayPeriod()}, ${name}.`,
+      greeting,
 
-      /*
-       * Temporary until the real Focus Score
-       * engine is connected.
-       *
-       * This value must eventually come from
-       * the Focus Score domain rather than being
-       * hardcoded.
-       */
-      focusScore: 88,
+      focusScore,
 
       marketSummary: {
-        title:
-          "Market Summary",
-
+        title: "Market Summary",
         content:
-          `${context.summary} ` +
-          `Current market structure: ` +
-          `${structure.structure}. ` +
-          `Higher-timeframe bias: ` +
-          `${structure.higherTimeframeBias}.`,
+          `${session.description} ${structureSummary}`,
       },
 
       mission: {
         title:
-          mission.title,
-
+          "Today's Trading Mission",
         content:
-          mission.description,
+          opportunity
+            ? `${opportunity.symbol} is SmartPulse's highest-priority market (${sourceLabel}). Wait for confirmation before taking action.`
+            : "Monitor the active market universe and wait for a qualified institutional opportunity.",
       },
 
       opportunity: {
         title:
           "Best Opportunity",
-
         content:
-          `${opportunity.symbol} is currently ` +
-          `${opportunity.state} with ` +
-          `${opportunity.confidence}% confidence.`,
+          opportunitySummary,
       },
 
       risk: {
-        title:
-          "Risk Alert",
-
+        title: "Risk Alert",
         content:
-          context.isMarketOpen
-            ? "Market is open. Follow your trading plan and wait for confirmation before entering."
-            : "Market is currently closed. Prepare your watchlist for the next trading session.",
+          "Market is open. Follow your trading plan and wait for confirmation before entering.",
       },
 
       growth: {
         title:
           "Growth Insight",
-
         content:
-          "Continue improving your patience by waiting for candle confirmation before every entry.",
+          "Continue improving your patience by waiting for confirmation before every entry.",
       },
 
       economicEvents: {
         title:
           "Economic Events",
-
         content:
-          "No major scheduled events in the immediate term.",
+          `${macroBrief.headline} ${macroBrief.summary}`,
       },
 
       closing:
@@ -125,13 +205,11 @@ export class DailyBriefingBuilder {
     const hour =
       new Date().getHours();
 
-    if (hour < 12) {
+    if (hour < 12)
       return "Morning";
-    }
 
-    if (hour < 18) {
+    if (hour < 18)
       return "Afternoon";
-    }
 
     return "Evening";
   }

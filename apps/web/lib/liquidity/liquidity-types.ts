@@ -8,6 +8,11 @@ export type LiquidityKind =
   | "equal_highs"
   | "equal_lows";
 
+export type LiquidityHeat =
+  | "cold"
+  | "warm"
+  | "hot";
+
 export interface LiquidityPool {
   symbol: string;
 
@@ -24,6 +29,12 @@ export interface LiquidityPool {
   firstSeenAt: string;
 
   lastSeenAt: string;
+
+  distance: number;
+
+  targetScore: number;
+
+  heat: LiquidityHeat;
 }
 
 export interface LiquiditySweep {
@@ -35,13 +46,6 @@ export interface LiquiditySweep {
 
   timestamp: string;
 
-  /**
-   * Buy-side liquidity sweep:
-   * price trades above the level and closes back below it.
-   *
-   * Sell-side liquidity sweep:
-   * price trades below the level and closes back above it.
-   */
   confirmation:
     | "buy_side_rejection"
     | "sell_side_rejection";
@@ -61,6 +65,10 @@ export interface LiquidityAnalysis {
     | null;
 
   nearestSellSide:
+    | LiquidityPool
+    | null;
+
+  highestPriority:
     | LiquidityPool
     | null;
 

@@ -14,7 +14,6 @@ import type {
   OpportunityDecision,
 } from "./decision-types";
 
-
 export class DecisionService {
   static async current(
     symbol: string
@@ -31,7 +30,12 @@ export class DecisionService {
     );
   }
 
-
+  /**
+   * Evaluate a decision from an already
+   * calculated Institutional Setup.
+   *
+   * No market-data request is performed.
+   */
   static evaluate(
     setup: InstitutionalSetup
   ): OpportunityDecision {

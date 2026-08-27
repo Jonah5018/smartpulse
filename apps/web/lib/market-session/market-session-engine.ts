@@ -12,32 +12,12 @@ export class MarketSessionEngine {
    * Determine the currently active forex session.
    *
    * Session hours are evaluated in each market's
-   * own IANA timezone, rather than using fixed UTC
+   * own IANA timezone rather than using fixed UTC
    * offsets.
    */
   static current(
     date = new Date()
   ): SessionStatus {
-    if (
-      MarketSessionUtils.isWeekend(
-        date
-      )
-    ) {
-      return {
-        current: "closed",
-        isOpen: false,
-        description:
-          "Forex market is closed for the weekend.",
-        nextSession: "sydney",
-        nextSessionStartsAt:
-          MarketSessionUtils.nextSessionStart(
-            "sydney",
-            date
-          ),
-        overlap: "none",
-      };
-    }
-
     const active =
       this.activeSessions(date);
 
@@ -46,17 +26,22 @@ export class MarketSessionEngine {
     ) {
       return {
         current: "new_york",
+
         isOpen: true,
+
         description:
           active.includes("london")
             ? "New York session during the London/New York overlap."
             : "New York trading session.",
+
         nextSession: "sydney",
+
         nextSessionStartsAt:
           MarketSessionUtils.nextSessionStart(
             "sydney",
             date
           ),
+
         overlap:
           active.includes("london")
             ? "london_new_york"
@@ -69,17 +54,22 @@ export class MarketSessionEngine {
     ) {
       return {
         current: "london",
+
         isOpen: true,
+
         description:
           active.includes("tokyo")
             ? "London session during the Tokyo/London transition."
             : "London trading session.",
+
         nextSession: "new_york",
+
         nextSessionStartsAt:
           MarketSessionUtils.nextSessionStart(
             "new_york",
             date
           ),
+
         overlap:
           active.includes("tokyo")
             ? "tokyo_london"
@@ -92,17 +82,22 @@ export class MarketSessionEngine {
     ) {
       return {
         current: "tokyo",
+
         isOpen: true,
+
         description:
           active.includes("sydney")
             ? "Tokyo session during the Sydney/Tokyo overlap."
             : "Tokyo trading session.",
+
         nextSession: "london",
+
         nextSessionStartsAt:
           MarketSessionUtils.nextSessionStart(
             "london",
             date
           ),
+
         overlap:
           active.includes("sydney")
             ? "sydney_tokyo"
@@ -115,30 +110,40 @@ export class MarketSessionEngine {
     ) {
       return {
         current: "sydney",
+
         isOpen: true,
+
         description:
           "Sydney trading session.",
+
         nextSession: "tokyo",
+
         nextSessionStartsAt:
           MarketSessionUtils.nextSessionStart(
             "tokyo",
             date
           ),
+
         overlap: "none",
       };
     }
 
     return {
       current: "closed",
+
       isOpen: false,
+
       description:
         "No major forex session is currently active.",
+
       nextSession: "sydney",
+
       nextSessionStartsAt:
         MarketSessionUtils.nextSessionStart(
           "sydney",
           date
         ),
+
       overlap: "none",
     };
   }
@@ -151,7 +156,8 @@ export class MarketSessionEngine {
 
     /*
      * Sydney:
-     * 08:00 - 17:00 local.
+     * 08:00 - 17:00 local,
+     * Monday-Friday.
      */
     const sydneyHour =
       MarketSessionUtils.localHour(
@@ -159,7 +165,14 @@ export class MarketSessionEngine {
         date
       );
 
+    const sydneyWeekday =
+      MarketSessionUtils.isWeekdayInTimezone(
+        "sydney",
+        date
+      );
+
     if (
+      sydneyWeekday &&
       sydneyHour !== null &&
       sydneyHour >= 8 &&
       sydneyHour < 17
@@ -169,7 +182,8 @@ export class MarketSessionEngine {
 
     /*
      * Tokyo:
-     * 09:00 - 18:00 local.
+     * 09:00 - 18:00 local,
+     * Monday-Friday.
      */
     const tokyoHour =
       MarketSessionUtils.localHour(
@@ -177,7 +191,14 @@ export class MarketSessionEngine {
         date
       );
 
+    const tokyoWeekday =
+      MarketSessionUtils.isWeekdayInTimezone(
+        "tokyo",
+        date
+      );
+
     if (
+      tokyoWeekday &&
       tokyoHour !== null &&
       tokyoHour >= 9 &&
       tokyoHour < 18
@@ -187,7 +208,8 @@ export class MarketSessionEngine {
 
     /*
      * London:
-     * 08:00 - 17:00 local.
+     * 08:00 - 17:00 local,
+     * Monday-Friday.
      */
     const londonHour =
       MarketSessionUtils.localHour(
@@ -195,7 +217,14 @@ export class MarketSessionEngine {
         date
       );
 
+    const londonWeekday =
+      MarketSessionUtils.isWeekdayInTimezone(
+        "london",
+        date
+      );
+
     if (
+      londonWeekday &&
       londonHour !== null &&
       londonHour >= 8 &&
       londonHour < 17
@@ -205,7 +234,8 @@ export class MarketSessionEngine {
 
     /*
      * New York:
-     * 08:00 - 17:00 local.
+     * 08:00 - 17:00 local,
+     * Monday-Friday.
      */
     const newYorkHour =
       MarketSessionUtils.localHour(
@@ -213,7 +243,14 @@ export class MarketSessionEngine {
         date
       );
 
+    const newYorkWeekday =
+      MarketSessionUtils.isWeekdayInTimezone(
+        "new_york",
+        date
+      );
+
     if (
+      newYorkWeekday &&
       newYorkHour !== null &&
       newYorkHour >= 8 &&
       newYorkHour < 17

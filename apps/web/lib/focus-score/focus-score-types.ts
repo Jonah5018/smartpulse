@@ -2,12 +2,14 @@ import type {
   Opportunity,
 } from "@/lib/opportunity";
 
+
 export type FocusPriority =
   | "ignore"
   | "low"
   | "watch"
   | "high"
   | "critical";
+
 
 export type FocusAction =
   | "ignore"
@@ -16,6 +18,7 @@ export type FocusAction =
   | "prepare"
   | "review_now"
   | "watch";
+
 
 export interface FocusScoreFactors {
   opportunity: number;
@@ -37,6 +40,40 @@ export interface FocusScoreFactors {
   calendarRisk: number;
 }
 
+
+/**
+ * Explainable contribution of one Focus Score factor.
+ *
+ * rawScore:
+ *   The factor's normalized 0-100 strength.
+ *
+ * weight:
+ *   How much influence the factor has on
+ *   the final Focus Score.
+ *
+ * contribution:
+ *   The number of points this factor contributes
+ *   to the final 100-point score.
+ */
+export interface FocusScoreBreakdownItem {
+  rawScore: number;
+
+  weight: number;
+
+  contribution: number;
+}
+
+
+/**
+ * Explainable Focus Score breakdown.
+ */
+export type FocusScoreBreakdown =
+  Record<
+    keyof FocusScoreFactors,
+    FocusScoreBreakdownItem
+  >;
+
+
 export interface FocusScore {
   symbol: string;
 
@@ -49,6 +86,8 @@ export interface FocusScore {
   opportunity: Opportunity;
 
   factors: FocusScoreFactors;
+
+  breakdown: FocusScoreBreakdown;
 
   reason: string;
 

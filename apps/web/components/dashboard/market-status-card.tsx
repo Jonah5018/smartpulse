@@ -1,8 +1,12 @@
 interface MarketStatusCardProps {
   marketStatus: string;
+
   tradingDay: boolean;
+
   holiday: boolean;
+
   earlyClose: boolean;
+
   closeTime: string | null;
 }
 
@@ -42,7 +46,9 @@ export function MarketStatusCard({
           </span>
 
           <span>
-            {holiday ? "Yes" : "No"}
+            {holiday
+              ? "Yes"
+              : "No"}
           </span>
         </div>
 
@@ -52,7 +58,9 @@ export function MarketStatusCard({
           </span>
 
           <span>
-            {earlyClose ? "Yes" : "No"}
+            {earlyClose
+              ? "Yes"
+              : "No"}
           </span>
         </div>
 

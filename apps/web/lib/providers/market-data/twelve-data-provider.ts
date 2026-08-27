@@ -7,17 +7,27 @@ import type {
   LiveMarketQuote,
 } from "./market-data-types";
 
+import {
+  MarketDataError,
+} from "./market-data-errors";
+
 interface TwelveDataErrorResponse {
   status?: "error";
+
   code?: number;
+
   message?: string;
 }
 
 interface TwelveDataQuote {
   symbol?: string;
+
   name?: string;
+
   close?: string | number;
+
   percent_change?: string | number;
+
   datetime?: string;
 }
 
@@ -32,9 +42,13 @@ interface TwelveDataQuoteResponse
 
 interface TwelveDataCandle {
   datetime?: string;
+
   open?: string | number;
+
   high?: string | number;
+
   low?: string | number;
+
   close?: string | number;
 }
 
@@ -57,7 +71,9 @@ export class TwelveDataProvider {
     const apiKey =
       this.getApiKey();
 
-    if (symbols.length === 0) {
+    if (
+      symbols.length === 0
+    ) {
       return [];
     }
 
@@ -88,7 +104,8 @@ export class TwelveDataProvider {
         );
 
       const data =
-        (await response.json()) as TwelveDataQuoteResponse;
+        (await response.json()) as
+          TwelveDataQuoteResponse;
 
       this.assertSuccessfulResponse(
         response.status,
@@ -120,7 +137,9 @@ export class TwelveDataProvider {
       this.getApiKey();
 
     if (
-      !Number.isInteger(outputsize) ||
+      !Number.isInteger(
+        outputsize
+      ) ||
       outputsize < 1 ||
       outputsize > 5000
     ) {
@@ -149,7 +168,7 @@ export class TwelveDataProvider {
       String(outputsize)
     );
 
-    /**
+    /*
      * SmartPulse's analysis engines
      * work chronologically.
      *
@@ -162,10 +181,9 @@ export class TwelveDataProvider {
       "asc"
     );
 
-    /**
-     * Forex timestamps are returned in UTC
-     * by default according to Twelve Data's
-     * documentation.
+    /*
+     * Forex timestamps are returned
+     * in UTC by default.
      *
      * Keeping the raw UTC timeline gives
      * our session engine one consistent
@@ -193,7 +211,8 @@ export class TwelveDataProvider {
         );
 
       const data =
-        (await response.json()) as TwelveDataCandleResponse;
+        (await response.json()) as
+          TwelveDataCandleResponse;
 
       this.assertSuccessfulResponse(
         response.status,
@@ -249,24 +268,49 @@ export class TwelveDataProvider {
         data.message ??
         "Unknown Twelve Data API error.";
 
-      throw new Error(
-        `Twelve Data API error ${status}: ${message}`
+      throw new MarketDataError(
+        `Twelve Data API error ${status}: ${message}`,
+        {
+          status,
+
+          provider:
+            "twelve-data",
+
+          retryable:
+            status === 429 ||
+            status >= 500,
+        }
       );
     }
 
     if (
-      data.status === "error"
+      data.status ===
+      "error"
     ) {
       const code =
-        data.code
-          ? ` (${data.code})`
+        data.code ?? null;
+
+      const codeText =
+        code !== null
+          ? ` (${code})`
           : "";
 
-      throw new Error(
-        `Twelve Data API error${code}: ${
+      throw new MarketDataError(
+        `Twelve Data API error${codeText}: ${
           data.message ??
           "Unknown API error."
-        }`
+        }`,
+        {
+          status: code,
+
+          provider:
+            "twelve-data",
+
+          retryable:
+            code === 429 ||
+            (code !== null &&
+              code >= 500),
+        }
       );
     }
   }
@@ -275,6 +319,16 @@ export class TwelveDataProvider {
    * Converts Twelve Data's quote
    * response into SmartPulse's
    * internal quote representation.
+   *
+   * IMPORTANT:
+   *
+   * Twelve Data's current quote endpoint
+   * provides the latest market price,
+   * not an executable bid/ask pair.
+   *
+   * Therefore SmartPulse must NOT
+   * represent the same price as both
+   * bid and ask.
    */
   private static parseQuotes(
     data: TwelveDataQuoteResponse
@@ -302,7 +356,10 @@ export class TwelveDataProvider {
             price === null
           ) {
             throw new Error(
-              `Invalid price returned for ${quote.symbol ?? "unknown symbol"}.`
+              `Invalid price returned for ${
+                quote.symbol ??
+                "unknown symbol"
+              }.`
             );
           }
 
@@ -316,18 +373,16 @@ export class TwelveDataProvider {
               quote.symbol ??
               "Unknown Instrument",
 
-            /**
-             * Twelve Data's quote endpoint
-             * provides the latest close/price,
-             * not a separate bid/ask feed.
+            /*
+             * The current Twelve Data
+             * quote endpoint does not provide
+             * a genuine executable bid/ask pair.
              *
-             * Until we integrate a genuine
-             * bid/ask source, both are represented
-             * by the latest available price.
+             * Do not fabricate these values.
              */
-            bid: price,
+            bid: null,
 
-            ask: price,
+            ask: null,
 
             price,
 
@@ -446,7 +501,7 @@ export class TwelveDataProvider {
   ): value is TwelveDataQuote {
     if (
       typeof value !==
-      "object" ||
+        "object" ||
       value === null
     ) {
       return false;
@@ -506,7 +561,15 @@ export class TwelveDataProvider {
     fallbackMessage: string
   ): Error {
     if (
-      error instanceof Error
+      error instanceof
+      MarketDataError
+    ) {
+      return error;
+    }
+
+    if (
+      error instanceof
+      Error
     ) {
       return error;
     }

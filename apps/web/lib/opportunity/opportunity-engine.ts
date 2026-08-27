@@ -1,9 +1,5 @@
-import type {
-  CandleInterval,
-} from "@/lib/market";
-
 import {
-  InstitutionalSetupEngine,
+  InstitutionalSetupService,
 } from "@/lib/institutional-setup";
 
 import type {
@@ -25,7 +21,7 @@ export class OpportunityEngine {
     profile?: TraderAnalysisProfile
   ): Promise<Opportunity> {
     const setup =
-      await InstitutionalSetupEngine.current(
+      await InstitutionalSetupService.current(
         symbol,
         undefined,
         200,
@@ -38,17 +34,15 @@ export class OpportunityEngine {
   }
 
   /**
-   * Build an Opportunity from the
-   * Institutional Setup engine.
+   * Build an Opportunity from an already
+   * calculated Institutional Setup.
    *
-   * Opportunity does not independently
-   * perform market analysis.
-   *
-   * This prevents different SmartPulse
-   * layers from producing conflicting
-   * interpretations of the same market.
+   * This allows higher-level orchestration
+   * to calculate the institutional setup once
+   * and reuse it across multiple SmartPulse
+   * intelligence layers.
    */
-  private static fromInstitutionalSetup(
+  static fromInstitutionalSetup(
     setup: InstitutionalSetup
   ): Opportunity {
     const direction =
@@ -116,7 +110,7 @@ export class OpportunityEngine {
         setup.liquiditySweep,
 
       displacement:
-        setup.displacement,
+        setup.displacement.direction,
 
       entryZone:
         setup.entryZone,

@@ -11,13 +11,15 @@ import {
 } from "@/lib/opportunity";
 
 export class MissionEngine {
-  static async current(): Promise<Mission> {
+  static async current(
+    symbol: string
+  ): Promise<Mission> {
     const context =
       ContextService.current();
 
     const opportunity =
       await OpportunityService.current(
-        "GBP/USD"
+        symbol
       );
 
     return {

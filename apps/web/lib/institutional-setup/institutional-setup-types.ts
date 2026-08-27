@@ -1,3 +1,19 @@
+import type {
+  LiquidityMap,
+} from "@/lib/institutional/liquidity";
+
+import type {
+  ConfluenceResult,
+} from "@/lib/institutional/confluence";
+
+import type {
+  Displacement,
+} from "@/lib/institutional/displacement";
+
+import type {
+  InstitutionalExplanation,
+} from "@/lib/institutional/explainability";
+
 export type SetupDirection =
   | "buy"
   | "sell"
@@ -22,23 +38,16 @@ export type SetupContext =
 
 export interface PriceZone {
   low: number;
-
   high: number;
-
   midpoint: number;
 }
 
 export interface RiskRewardPlan {
   entry: number;
-
   stopLoss: number;
-
   target: number;
-
   risk: number;
-
   reward: number;
-
   ratio: number;
 }
 
@@ -54,6 +63,10 @@ export interface InstitutionalSetup {
   quality: SetupQuality;
 
   confidence: number;
+
+  confluence: ConfluenceResult;
+
+  explainability: InstitutionalExplanation;
 
   marketStructure:
     | "bullish"
@@ -90,30 +103,19 @@ export interface InstitutionalSetup {
     | "sell_side"
     | null;
 
-  entryZone:
-    | PriceZone
-    | null;
+  liquidity: LiquidityMap;
 
-  invalidation:
-    | number
-    | null;
+  entryZone: PriceZone | null;
 
-  targetLiquidity:
-    | number
-    | null;
+  invalidation: number | null;
 
-  riskReward:
-    | RiskRewardPlan
-    | null;
+  targetLiquidity: number | null;
 
-  displacement:
-    | "bullish"
-    | "bearish"
-    | null;
+  riskReward: RiskRewardPlan | null;
 
-  fairValueGap:
-    | PriceZone
-    | null;
+  displacement: Displacement;
+
+  fairValueGap: PriceZone | null;
 
   summary: string;
 
