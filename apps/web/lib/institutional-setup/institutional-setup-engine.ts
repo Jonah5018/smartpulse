@@ -89,8 +89,6 @@ export class InstitutionalSetupEngine {
    */
   private static readonly DEFAULT_PROFILE:
     TraderAnalysisProfile = {
-      tradingStyle: "intraday",
-
       timeframes: {
         context: "4h",
 
@@ -430,7 +428,15 @@ export class InstitutionalSetupEngine {
       executionTimeframe,
 
       multiTimeframeAlignment:
-        multiTimeframe.alignment,
+        multiTimeframe.context.trend ===
+          "range"
+          ? "range_context"
+          : multiTimeframe.alignment ===
+              "strong" ||
+            multiTimeframe.alignment ===
+              "moderate"
+            ? "aligned"
+            : "partially_aligned",
 
       liquidity: liquidityMap,
 
@@ -475,9 +481,6 @@ export class InstitutionalSetupEngine {
     }
 
     return {
-      tradingStyle:
-        "intraday",
-
       timeframes: {
         context:
           this.getDefaultContextTimeframe(
@@ -490,14 +493,16 @@ export class InstitutionalSetupEngine {
           ),
 
         execution:
-          timeframe,
+          this.getDefaultExecutionTimeframe(
+            timeframe
+          ),
       },
     };
   }
 
   private static getDefaultContextTimeframe(
     execution: CandleInterval
-  ): CandleInterval {
+  ): TraderAnalysisProfile["timeframes"]["context"] {
     switch (execution) {
       case "1min":
       case "5min":
@@ -510,11 +515,11 @@ export class InstitutionalSetupEngine {
       case "1h":
       case "2h":
       case "4h":
-        return "1day";
+        return "4h";
 
       case "8h":
       case "1day":
-        return "1day";
+        return "4h";
 
       default:
         return "4h";
@@ -523,7 +528,7 @@ export class InstitutionalSetupEngine {
 
   private static getDefaultStructureTimeframe(
     execution: CandleInterval
-  ): CandleInterval {
+  ): TraderAnalysisProfile["timeframes"]["structure"] {
     switch (execution) {
       case "1min":
       case "5min":
@@ -540,10 +545,23 @@ export class InstitutionalSetupEngine {
       case "4h":
       case "8h":
       case "1day":
-        return "1day";
+        return "4h";
 
       default:
         return "1h";
+    }
+  }
+
+  private static getDefaultExecutionTimeframe(
+    execution: CandleInterval
+  ): TraderAnalysisProfile["timeframes"]["execution"] {
+    switch (execution) {
+      case "1min":
+      case "5min":
+        return "15min";
+
+      default:
+        return execution as TraderAnalysisProfile["timeframes"]["execution"];
     }
   }
 
@@ -606,26 +624,10 @@ export class InstitutionalSetupEngine {
       | "bearish"
       | null,
     multiTimeframeAlignment:
-      | "aligned"
-      | "partially_aligned"
-      | "countertrend"
-      | "range_context"
+      MultiTimeframeAnalysis["alignment"]
   ): boolean {
     if (
       direction === "neutral"
-    ) {
-      return false;
-    }
-
-    /*
-     * Countertrend execution is the one
-     * alignment state that directly prevents
-     * the technical confirmation from being
-     * considered aligned.
-     */
-    if (
-      multiTimeframeAlignment ===
-      "countertrend"
     ) {
       return false;
     }
@@ -1112,39 +1114,18 @@ export class InstitutionalSetupEngine {
     multiTimeframe: MultiTimeframeAnalysis
   ): SetupContext {
     if (
-      multiTimeframe.alignment ===
-      "countertrend"
-    ) {
-      return "countertrend";
-    }
-
-    if (
-      multiTimeframe.alignment ===
-      "range_context"
+      multiTimeframe.context.trend ===
+      "range"
     ) {
       return "inside_range";
     }
 
     if (
       multiTimeframe.alignment ===
-      "aligned"
-    ) {
-      return "with_context";
-    }
-
-    if (
+        "weak" ||
       multiTimeframe.alignment ===
-      "partially_aligned"
+        "mixed"
     ) {
-      if (
-        multiTimeframe.context.trend ===
-          "range" ||
-        multiTimeframe.structure.trend ===
-          "range"
-      ) {
-        return "inside_range";
-      }
-
       return "with_context";
     }
 

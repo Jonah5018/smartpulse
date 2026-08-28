@@ -125,7 +125,6 @@ export class OpportunityService {
     const profileKey =
       profile
         ? [
-            profile.tradingStyle,
             profile.timeframes.context,
             profile.timeframes.structure,
             profile.timeframes.execution,

@@ -3,10 +3,35 @@ import {
 } from "@/lib/market-structure";
 
 import type {
-  TraderAnalysisProfile,
   MultiTimeframeAnalysis,
-  TimeframeMarketState,
 } from "./multi-timeframe-types";
+
+type TraderAnalysisProfile = {
+  timeframes: {
+    context: Parameters<typeof MarketStructureService.current>[1];
+    structure: Parameters<typeof MarketStructureService.current>[1];
+    execution: Parameters<typeof MarketStructureService.current>[1];
+  };
+};
+
+type AnalysisTimeframe = "5min" | "15min" | "1h" | "4h";
+
+type TimeframeMarketState = {
+  timeframe: AnalysisTimeframe;
+  trend: "bullish" | "bearish" | "range";
+  bias: "continuation" | "retracement" | "reversal" | "neutral";
+  lastBOS: number | null;
+  lastCHOCH: number | null;
+  liquiditySide: "buy_side" | "sell_side" | null;
+  structure: Awaited<
+    ReturnType<typeof MarketStructureService.current>
+  >["structure"];
+  structureEvent: Awaited<
+    ReturnType<typeof MarketStructureService.current>
+  >["latestEvent"];
+  confidence: number;
+  summary: string;
+};
 
 export class MultiTimeframeAnalyzer {
   static async analyze(
@@ -14,28 +39,35 @@ export class MultiTimeframeAnalyzer {
     profile: TraderAnalysisProfile
   ): Promise<MultiTimeframeAnalysis> {
     const [
+      h4Analysis,
       contextAnalysis,
       structureAnalysis,
       executionAnalysis,
-    ] = await Promise.all([
+   ] = await Promise.all([
+      MarketStructureService.current(
+        symbol,
+        "4h",
+        200
+    ),
+
       MarketStructureService.current(
         symbol,
         profile.timeframes.context,
         200
-      ),
+   ),
 
       MarketStructureService.current(
         symbol,
         profile.timeframes.structure,
         200
-      ),
+   ),
 
       MarketStructureService.current(
         symbol,
         profile.timeframes.execution,
         200
-      ),
-    ]);
+   ),
+]);
 
     const context =
       this.toTimeframeState(
@@ -55,8 +87,15 @@ export class MultiTimeframeAnalyzer {
         executionAnalysis
       );
 
+    const h4 =
+      this.toTimeframeState(
+        "4h",
+        h4Analysis
+      );
+
     const directionalBias =
       this.determineDirectionalBias(
+        h4.trend,
         context.trend,
         structure.trend,
         execution.trend
@@ -72,6 +111,7 @@ export class MultiTimeframeAnalyzer {
 
     const confidence =
       this.calculateConfidence(
+        h4,
         context,
         structure,
         execution,
@@ -80,6 +120,7 @@ export class MultiTimeframeAnalyzer {
 
     const summary =
       this.buildSummary(
+        h4,
         context,
         structure,
         execution,
@@ -89,17 +130,17 @@ export class MultiTimeframeAnalyzer {
 
     const explanation =
       this.buildExplanation(
+        h4,
         context,
         structure,
         execution,
         directionalBias,
         alignment
       );
-
     return {
       symbol,
 
-      profile,
+      h4,
 
       context,
 
@@ -109,7 +150,7 @@ export class MultiTimeframeAnalyzer {
 
       directionalBias,
 
-      alignment,
+      alignment: alignment as MultiTimeframeAnalysis["alignment"],
 
       confidence,
 
@@ -128,10 +169,29 @@ export class MultiTimeframeAnalyzer {
     >
   ): TimeframeMarketState {
     return {
-      timeframe,
+      timeframe:
+        timeframe === "1min" || timeframe === "30min"
+          ? "15min"
+          : timeframe === "2h" || timeframe === "8h" || timeframe === "1day"
+            ? "4h"
+            : timeframe ?? "1h",
 
       trend:
         analysis.trend,
+
+      bias:
+        analysis.trend === "range"
+          ? "neutral"
+          : "continuation",
+
+      lastBOS:
+        null,
+
+      lastCHOCH:
+        null,
+
+      liquiditySide:
+        null,
 
       structure:
         analysis.structure,
@@ -148,6 +208,10 @@ export class MultiTimeframeAnalyzer {
   }
 
   private static determineDirectionalBias(
+    h4Trend:
+      | "bullish"
+      | "bearish"
+      | "range",
     contextTrend:
       | "bullish"
       | "bearish"
@@ -166,6 +230,18 @@ export class MultiTimeframeAnalyzer {
     | "bullish"
     | "bearish"
     | "neutral" {
+
+    /*
+    * H4 external structure has absolute priority.
+    */
+
+    if (h4Trend === "bullish") {
+      return "bullish";
+   }
+
+    if (h4Trend === "bearish") {
+      return "bearish";
+   }
     /*
      * The execution timeframe is important,
      * but it does not override a clearly
@@ -330,6 +406,7 @@ export class MultiTimeframeAnalyzer {
   }
 
   private static calculateConfidence(
+    h4: TimeframeMarketState,
     context: TimeframeMarketState,
     structure: TimeframeMarketState,
     execution: TimeframeMarketState,
@@ -345,12 +422,14 @@ export class MultiTimeframeAnalyzer {
      * primary directional context.
      */
     let score =
+      h4.confidence *
+        0.30 +
       context.confidence *
-        0.25 +
+        0.20 +
       structure.confidence *
-        0.45 +
+        0.30 +
       execution.confidence *
-        0.30;
+        0.20;
 
     if (
       alignment ===
@@ -398,6 +477,7 @@ export class MultiTimeframeAnalyzer {
   }
 
   private static buildSummary(
+    h4: TimeframeMarketState,
     context: TimeframeMarketState,
     structure: TimeframeMarketState,
     execution: TimeframeMarketState,
@@ -411,23 +491,22 @@ export class MultiTimeframeAnalyzer {
       | "countertrend"
       | "range_context"
   ): string {
-    if (
-      directionalBias ===
-      "neutral"
-    ) {
-      return (
-        `No clear directional bias. ` +
-        `${context.timeframe} context is ${context.trend}, ` +
-        `${structure.timeframe} structure is ${structure.trend}, ` +
-        `and ${execution.timeframe} execution structure is ${execution.trend}.`
-      );
-    }
-
     const biasLabel =
       directionalBias ===
       "bullish"
         ? "bullish"
         : "bearish";
+
+    if (
+      directionalBias ===
+      "neutral"
+    ) {
+      return (
+        `H4 ${h4.trend} institutional structure. ` +
+        `${structure.timeframe} confirms ${biasLabel} direction, ` +
+        `while ${execution.timeframe} is used for execution alignment.`
+     );
+    }
 
     if (
       alignment ===
@@ -461,6 +540,7 @@ export class MultiTimeframeAnalyzer {
   }
 
   private static buildExplanation(
+    h4: TimeframeMarketState,
     context: TimeframeMarketState,
     structure: TimeframeMarketState,
     execution: TimeframeMarketState,
@@ -475,6 +555,7 @@ export class MultiTimeframeAnalyzer {
       | "range_context"
   ): string {
     return [
+      `H4 INSTITUTIONAL BIAS: ${h4.trend} — ${h4.summary}`,
       `CONTEXT (${context.timeframe}): ${context.trend} — ${context.summary}`,
 
       `STRUCTURE (${structure.timeframe}): ${structure.trend} / ${structure.structure} — ${structure.summary}`,

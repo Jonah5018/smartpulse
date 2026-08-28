@@ -15,6 +15,10 @@ import type {
   MarketCandle,
 } from "@/lib/market";
 
+import {
+  MarketCache,
+} from "@/lib/cache";
+
 export class MarketRepository {
   private static quoteCache =
     new Map<
@@ -317,16 +321,14 @@ export class MarketRepository {
      */
 
     const cached =
-      this.candleCache.get(
-        cacheKey
-      );
+      MarketCache.get(
+        normalizedSymbol,
+        interval
+    );
 
-    if (
-      cached &&
-      now < cached.expiresAt
-    ) {
-      return cached.data;
-    }
+    if (cached) {
+      return cached;
+   }
 
     /*
      * ------------------------------------------------
@@ -361,34 +363,36 @@ export class MarketRepository {
      * ------------------------------------------------
      */
 
-    const request =
+    const candleRequest =
       MarketDataService.candles(
         normalizedSymbol,
         interval,
         outputsize
       )
         .then((candles) => {
-          this.candleCache.set(
-            cacheKey,
-            {
-              data: candles,
-              expiresAt:
-                Date.now() +
-                this.CANDLE_CACHE_DURATION,
-            }
-          );
+          MarketCache.set(
+            normalizedSymbol,
+            interval,
+            candles
+        );
 
-          return candles;
-        })
+        return candles;
+      })
         .catch((error) => {
           if (
-            error instanceof
-              MarketDataError &&
+            error instanceof MarketDataError &&
             error.status === 429
           ) {
-            this.markProviderRateLimited(
-              error
+            this.markProviderRateLimited(error);
+
+            const fallback = MarketCache.get(
+              normalizedSymbol,
+              interval
             );
+
+            if (fallback) {
+              return fallback;
+            }
           }
 
           throw error;
@@ -401,10 +405,10 @@ export class MarketRepository {
 
     this.candleRequests.set(
       cacheKey,
-      request
+      candleRequest
     );
 
-    return request;
+    return candleRequest;
   }
 
   /**
@@ -422,5 +426,6 @@ export class MarketRepository {
 
     this.providerCooldownUntil =
       0;
+    MarketCache.clear();
   }
 }

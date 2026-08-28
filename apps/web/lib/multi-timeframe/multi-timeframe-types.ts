@@ -1,56 +1,59 @@
-import type {
-  CandleInterval,
-} from "@/lib/market";
+export type Timeframe =
+  | "5min"
+  | "15min"
+  | "1h"
+  | "4h";
 
-export type TradingStyle =
-  | "scalping"
-  | "intraday"
-  | "swing";
+export type Trend =
+  | "bullish"
+  | "bearish"
+  | "range";
 
-export interface TimeframeConfiguration {
-  context: CandleInterval;
+export type DirectionalBias =
+  | "bullish"
+  | "bearish"
+  | "neutral";
 
-  structure: CandleInterval;
+export type Alignment =
+  | "strong"
+  | "moderate"
+  | "weak"
+  | "mixed";
 
-  execution: CandleInterval;
-}
-
-export interface TraderAnalysisProfile {
-  tradingStyle: TradingStyle;
-
-  timeframes: TimeframeConfiguration;
-}
+export type InstitutionalBias =
+  | "continuation"
+  | "retracement"
+  | "reversal"
+  | "neutral";
 
 export interface TimeframeMarketState {
-  timeframe: CandleInterval;
+  timeframe: Timeframe;
 
-  trend:
-    | "bullish"
-    | "bearish"
-    | "range";
-
-  structure:
-    | "impulse"
-    | "pullback"
-    | "range"
-    | "expansion"
-    | "unknown";
-
-  structureEvent:
-    | "none"
-    | "bos"
-    | "mss"
-    | "choch";
+  trend: Trend;
 
   confidence: number;
 
   summary: string;
 }
 
+export interface H4InstitutionalState
+  extends TimeframeMarketState {
+  bias: InstitutionalBias;
+
+  lastBOS: number | null;
+
+  lastCHOCH: number | null;
+
+  liquiditySide:
+    | "buy_side"
+    | "sell_side"
+    | null;
+}
+
 export interface MultiTimeframeAnalysis {
   symbol: string;
 
-  profile: TraderAnalysisProfile;
+  h4: H4InstitutionalState;
 
   context: TimeframeMarketState;
 
@@ -58,16 +61,9 @@ export interface MultiTimeframeAnalysis {
 
   execution: TimeframeMarketState;
 
-  directionalBias:
-    | "bullish"
-    | "bearish"
-    | "neutral";
+  directionalBias: DirectionalBias;
 
-  alignment:
-    | "aligned"
-    | "partially_aligned"
-    | "countertrend"
-    | "range_context";
+  alignment: Alignment;
 
   confidence: number;
 
@@ -75,3 +71,38 @@ export interface MultiTimeframeAnalysis {
 
   explanation: string;
 }
+
+export interface TraderAnalysisProfile {
+  timeframes: {
+    context: Timeframe;
+    structure: Timeframe;
+    execution: Timeframe;
+  };
+}
+
+export const SCALPER_PROFILE: TraderAnalysisProfile =
+  {
+    timeframes: {
+      context: "1h",
+      structure: "15min",
+      execution: "5min",
+    },
+  };
+
+export const INTRADAY_PROFILE: TraderAnalysisProfile =
+  {
+    timeframes: {
+      context: "4h",
+      structure: "1h",
+      execution: "15min",
+    },
+  };
+
+export const SWING_PROFILE: TraderAnalysisProfile =
+  {
+    timeframes: {
+      context: "4h",
+      structure: "1h",
+      execution: "15min",
+    },
+  };
