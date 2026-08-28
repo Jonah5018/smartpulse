@@ -180,16 +180,16 @@ export class MarketRepository {
      * market information.
      */
 
-    const cached =
+    const memoryCache =
       this.quoteCache.get(
         cacheKey
       );
 
     if (
-      cached &&
-      now < cached.expiresAt
+      memoryCache &&
+      now < memoryCache.expiresAt
     ) {
-      return cached.data;
+      return memoryCache.data;
     }
 
     /*
@@ -320,15 +320,15 @@ export class MarketRepository {
      * ------------------------------------------------
      */
 
-    const cached =
+    const memoryCache =
       MarketCache.get(
         normalizedSymbol,
         interval
     );
 
-    if (cached) {
-      return cached;
-   }
+    if (memoryCache) {
+      return memoryCache;
+    }
 
     /*
      * ------------------------------------------------
@@ -338,9 +338,19 @@ export class MarketRepository {
 
     if (
       this.isProviderCoolingDown()
-    ) {
-      throw this.createCooldownError();
-    }
+   ) {
+    const persistent =
+      MarketCache.get(
+        normalizedSymbol,
+        interval
+      );
+
+    if (persistent) {
+      return persistent;
+   }
+
+   throw this.createCooldownError();
+  }
 
     /*
      * ------------------------------------------------
@@ -370,12 +380,21 @@ export class MarketRepository {
         outputsize
       )
         .then((candles) => {
+          this.candleCache.set(
+            cacheKey,
+            {
+              data: candles,
+              expiresAt:
+                Date.now() +
+                this.CANDLE_CACHE_DURATION,
+            }
+          );
           MarketCache.set(
             normalizedSymbol,
             interval,
-            candles
+            candles,
+            60
         );
-
         return candles;
       })
         .catch((error) => {
