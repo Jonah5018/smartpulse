@@ -64,6 +64,14 @@ import {
   LoadMacroContext,
 } from "@/lib/application/macro-context/load-macro-context";
 
+import {
+  TopDownService,
+} from "@/lib/top-down";
+
+import {
+  TopDownReportCard,
+} from "@/components/intelligence/top-down-report-card";
+
 interface IntelligencePageProps {
   searchParams: Promise<{
     symbol?: string;
@@ -232,6 +240,11 @@ export default async function IntelligencePage({
          )
          : null;
 
+    const topDown =
+      liveIntelligence
+        ? await TopDownService.current(symbol)
+        : null; 
+
   /*
    * ------------------------------------------------
    * DISCOVERY CONTEXT
@@ -304,10 +317,9 @@ export default async function IntelligencePage({
 
 
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-                Institutional analysis across market
-                structure, liquidity, multi-timeframe
-                alignment, opportunity quality and
-                execution conditions.
+                Top-down ICT institutional analysis across H4 bias,
+                H1 dealing range, M15 liquidity engineering and
+                execution readiness.
               </p>
 
             </div>
@@ -595,11 +607,12 @@ export default async function IntelligencePage({
           --------------------------------------- */
 
         <div className="space-y-6">
+          {topDown && (
+            <TopDownReportCard report={topDown} />
+          )}
           {confluence && (
-            <ConfluenceMatrixCard
-              matrix={confluence}
-           />
-      )}
+            <ConfluenceMatrixCard matrix={confluence} />
+          )}
           <MarketIntelligence
             symbol={liveIntelligence.symbol}
             setup={liveIntelligence.setup}

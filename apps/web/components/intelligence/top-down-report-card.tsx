@@ -26,7 +26,7 @@ export function TopDownReportCard({
         </h2>
 
         <p className="mt-2 text-slate-400">
-          Institutional reasoning across H4, H1 and M15.
+          Top-down ICT institutional analysis across H4, H1 and M15.
         </p>
       </div>
 

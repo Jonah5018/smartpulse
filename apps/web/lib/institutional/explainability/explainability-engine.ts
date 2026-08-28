@@ -34,7 +34,7 @@ export class ExplainabilityEngine {
     const confirmations: string[] = [];
     const warnings: string[] = [];
 
-    if (structure.bos.detected) {
+    if (structure.bos?.detected) {
       confirmations.push(
         `Break of Structure confirms ${structure.bos.direction} continuation.`
       );
