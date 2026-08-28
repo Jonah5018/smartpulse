@@ -1,3 +1,4 @@
+
 import {
   InstitutionalSetupService,
 } from "@/lib/institutional-setup";
@@ -50,116 +51,99 @@ import {
   AIIntelligenceService,
 } from "@/lib/ai/intelligence";
 
+import {
+  AnalysisCache,
+} from "@/lib/analysis-cache";
 
 interface MarketAnalysis {
   setup: InstitutionalSetup;
-
   opportunity: Opportunity;
-
   focus: FocusScore;
-
   decision: OpportunityDecision;
-
-  insights: string[];
-
-  overallBias: string;
-
-  confidence: number;
-
-  generatedAt: string;
 }
-
 
 export class LoadMarketIntelligence {
   static async execute(
     symbol: string,
     watchlist: string[] = []
-  ) {
+  ): Promise<{
+    symbol: string;
+    session: ReturnType<typeof MarketSessionService.current>;
+    setup: InstitutionalSetup | null;
+    opportunity: Opportunity | null;
+    focus: FocusScore | null;
+    decision: OpportunityDecision | null;
+    marketSelection: ReturnType<typeof MarketSelectionService.select> | null;
+    aiBrief: Awaited<ReturnType<typeof AIIntelligenceService.generateBrief>> | null;
+    marketClosed: boolean;
+    marketAvailability: ReturnType<typeof MarketAvailabilityService.current>;
+  }> {
     /*
      * ------------------------------------------------
      * SESSION CONTEXT
      * ------------------------------------------------
-     *
-     * This remains useful as general market-session
-     * context for the dashboard.
-     *
-     * It is NOT used as the universal trading
-     * availability gate anymore.
-     *
-     * Individual instruments are evaluated through
-     * MarketAvailabilityService below.
      */
     const session =
       MarketSessionService.current();
-
 
     /*
      * ------------------------------------------------
      * NORMALIZE REQUESTED SYMBOL
      * ------------------------------------------------
      */
-
     const normalizedRequestedSymbol =
       symbol
         .trim()
         .toUpperCase();
 
+    /*
+     * ------------------------------------------------
+     * ANALYSIS CACHE
+     * ------------------------------------------------
+     */
+    const cacheKey =
+      `analysis:${normalizedRequestedSymbol}`;
+
+    const cached =
+      AnalysisCache.get<
+        Awaited<
+          ReturnType<
+            typeof LoadMarketIntelligence.execute
+          >
+        >
+      >(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
 
     /*
      * ------------------------------------------------
      * ACTIVE MARKET UNIVERSE
      * ------------------------------------------------
-     *
-     * SmartPulse considers the complete enabled
-     * market universe.
      */
     const symbols =
       getActiveMarketSymbols();
-
 
     /*
      * ------------------------------------------------
      * REQUESTED MARKET AVAILABILITY
      * ------------------------------------------------
-     *
-     * IMPORTANT:
-     *
-     * We no longer ask:
-     *
-     * "Is the Forex session open?"
-     *
-     * We ask:
-     *
-     * "Is THIS instrument open?"
-     *
-     * This allows:
-     *
-     * Forex → Forex calendar
-     * Gold  → Commodity calendar
-     * Crypto → 24/7 calendar
-     * Index → Index calendar
      */
     const requestedAvailability =
       MarketAvailabilityService.current(
         normalizedRequestedSymbol
       );
 
-
     /*
      * ------------------------------------------------
      * MARKET CLOSED
      * ------------------------------------------------
-     *
-     * If the trader explicitly selected a market
-     * that is closed, respect that selection.
-     *
-     * Do NOT silently replace it with another
-     * opportunity from the discovery universe.
      */
     if (
       !requestedAvailability.isOpen
     ) {
-      return {
+      const result = {
         symbol:
           normalizedRequestedSymbol,
 
@@ -175,24 +159,27 @@ export class LoadMarketIntelligence {
 
         marketSelection: null,
 
+        aiBrief: null,
+
         marketClosed: true,
 
         marketAvailability:
           requestedAvailability,
       };
-    }
 
+      AnalysisCache.set(
+        cacheKey,
+        result,
+        60
+      );
+
+      return result;
+    }
 
     /*
      * ------------------------------------------------
      * DETERMINE OPEN MARKETS
      * ------------------------------------------------
-     *
-     * Every active instrument gets its own
-     * availability check.
-     *
-     * Closed instruments are excluded from live
-     * institutional analysis for this cycle.
      */
     const availableSymbols =
       symbols.filter(
@@ -202,23 +189,10 @@ export class LoadMarketIntelligence {
           ).isOpen
       );
 
-
     /*
      * ------------------------------------------------
      * INSTITUTIONAL ANALYSIS
      * ------------------------------------------------
-     *
-     * Calculate each setup exactly once.
-     *
-     * The same setup is then reused by:
-     *
-     * Setup
-     *   ↓
-     * Opportunity
-     *   ↓
-     * Focus Score
-     *   ↓
-     * Decision
      */
     const analysisEntries =
       await Promise.all(
@@ -231,43 +205,33 @@ export class LoadMarketIntelligence {
                 200
               );
 
-
             const opportunity =
               OpportunityService.fromInstitutionalSetup(
                 setup
               );
-
 
             const focus =
               await FocusScoreService.fromOpportunity(
                 opportunity
               );
 
-
             const decision =
               DecisionService.evaluate(
                 setup
               );
 
-
             return [
               marketSymbol,
-
               {
                 setup,
-
                 opportunity,
-
                 focus,
-
                 decision,
               },
-
             ] as const;
           }
         )
       );
-
 
     const analyses =
       Object.fromEntries(
@@ -277,17 +241,10 @@ export class LoadMarketIntelligence {
         MarketAnalysis
       >;
 
-
     /*
      * ------------------------------------------------
      * OPPORTUNITY DISCOVERY
      * ------------------------------------------------
-     *
-     * Only currently available markets participate
-     * in live opportunity discovery.
-     *
-     * Watchlist remains a preference, not a
-     * restriction.
      */
     const opportunities =
       Object.fromEntries(
@@ -304,42 +261,24 @@ export class LoadMarketIntelligence {
         )
       );
 
-
     const marketSelection =
       MarketSelectionService.select(
         watchlist,
         opportunities
       );
 
-
     /*
      * ------------------------------------------------
-     * DETERMINE REQUESTED MARKET ANALYSIS
+     * REQUESTED MARKET
      * ------------------------------------------------
-     *
-     * The explicitly requested market remains
-     * authoritative.
      */
     const requestedAnalysis =
       analyses[
         normalizedRequestedSymbol
       ];
 
-
-    /*
-     * ------------------------------------------------
-     * DISCOVERY FALLBACK
-     * ------------------------------------------------
-     *
-     * If the requested symbol is valid and has
-     * already been analysed, use it.
-     *
-     * Otherwise SmartPulse can fall back to the
-     * strongest currently available opportunity.
-     */
     const selectedCandidate =
       marketSelection.bestOpportunity;
-
 
     const selectedAnalysis =
       selectedCandidate
@@ -350,11 +289,10 @@ export class LoadMarketIntelligence {
           ]
         : null;
 
-
     const finalAnalysis =
       requestedAnalysis ??
       selectedAnalysis;
-    
+
     const aiBrief =
       finalAnalysis
         ? await AIIntelligenceService.generateBrief(
@@ -369,18 +307,11 @@ export class LoadMarketIntelligence {
      * ------------------------------------------------
      * NO AVAILABLE ANALYSIS
      * ------------------------------------------------
-     *
-     * This is different from the requested market
-     * being closed.
-     *
-     * The market may technically be open, but the
-     * current analysis cycle may not have produced
-     * usable institutional data.
      */
-    
     if (!finalAnalysis) {
-      return {
-        symbol: normalizedRequestedSymbol,
+      const result = {
+        symbol:
+          normalizedRequestedSymbol,
 
         session,
 
@@ -401,16 +332,22 @@ export class LoadMarketIntelligence {
         marketAvailability:
           requestedAvailability,
       };
-    }
 
+      AnalysisCache.set(
+        cacheKey,
+        result,
+        60
+      );
+
+      return result;
+    }
 
     /*
      * ------------------------------------------------
      * SUCCESS
      * ------------------------------------------------
      */
-
-    return {
+    const result = {
       symbol:
         finalAnalysis.setup.symbol,
 
@@ -437,5 +374,18 @@ export class LoadMarketIntelligence {
       marketAvailability:
         requestedAvailability,
     };
+
+    /*
+     * ------------------------------------------------
+     * STORE ANALYSIS CACHE
+     * ------------------------------------------------
+     */
+    AnalysisCache.set(
+      cacheKey,
+      result,
+      60
+    );
+
+    return result;
   }
 }
