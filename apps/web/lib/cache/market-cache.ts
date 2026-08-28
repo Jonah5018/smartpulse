@@ -2,18 +2,18 @@ import type {
   MarketCandle,
 } from "@/lib/market";
 
-import type {
-  CachedMarketData,
-} from "./cache-types";
+interface Entry {
+  candles: MarketCandle[];
 
-const CACHE = new Map<
-  string,
-  CachedMarketData
->();
+  expires: number;
 
-const TTL_MINUTES = 5;
+  timestamp: number;
+}
 
 export class MarketCache {
+  private static store =
+    new Map<string, Entry>();
+
   private static key(
     symbol: string,
     timeframe: string
@@ -26,23 +26,14 @@ export class MarketCache {
     timeframe: string
   ): MarketCandle[] | null {
     const item =
-      CACHE.get(
+      this.store.get(
         this.key(symbol, timeframe)
       );
 
-    if (!item) {
-      return null;
-    }
+    if (!item) return null;
 
-    if (
-      new Date(item.expiresAt) <
-      new Date()
-    ) {
-      CACHE.delete(
-        this.key(symbol, timeframe)
-      );
-
-      return null;
+    if (Date.now() > item.expires) {
+      return item.candles;
     }
 
     return item.candles;
@@ -51,38 +42,22 @@ export class MarketCache {
   static set(
     symbol: string,
     timeframe: string,
-    candles: MarketCandle[]
+    candles: MarketCandle[],
+    ttlSeconds = 60
   ) {
-    const now =
-      new Date();
-
-    const expires =
-      new Date(
-        now.getTime() +
-          TTL_MINUTES *
-            60 *
-            1000
-      );
-
-    CACHE.set(
+    this.store.set(
       this.key(symbol, timeframe),
       {
-        symbol,
-
-        timeframe,
-
         candles,
-
-        updatedAt:
-          now.toISOString(),
-
-        expiresAt:
-          expires.toISOString(),
+        timestamp: Date.now(),
+        expires:
+          Date.now() +
+          ttlSeconds * 1000,
       }
     );
   }
 
   static clear() {
-    CACHE.clear();
+    this.store.clear();
   }
 }

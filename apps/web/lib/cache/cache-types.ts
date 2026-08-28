@@ -2,14 +2,14 @@ import type {
   MarketCandle,
 } from "@/lib/market";
 
-export interface CachedMarketData {
+export interface CachedCandles {
   symbol: string;
 
   timeframe: string;
 
   candles: MarketCandle[];
 
-  updatedAt: string;
+  cachedAt: string;
 
   expiresAt: string;
 }
