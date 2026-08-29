@@ -1,37 +1,82 @@
-import type {
-  AnalysisSnapshot,
-} from "./analysis-cache-types";
+import { AnalysisCache as CoreCache } from "./analysis-cache";
+import type { AnalysisSnapshot } from "./analysis-cache-types";
 
-export class AnalysisCache {
-  private static cache =
-    new Map<string, AnalysisSnapshot>();
+export class AnalysisCacheService {
+  /**
+   * Keep institutional snapshots for 7 days.
+   *
+   * Weekend Study Mode depends on this.
+   */
+  private static readonly SNAPSHOT_TTL =
+    60 * 60 * 24 * 7;
 
+  private static key(
+    symbol: string
+  ) {
+    return `snapshot:${symbol.toUpperCase()}`;
+  }
+
+  /**
+   * Load the latest saved snapshot.
+   */
   static get(
     symbol: string
-  ) {
-    return this.cache.get(
-      symbol.toUpperCase()
-    ) ?? null;
+  ): AnalysisSnapshot | null {
+    return CoreCache.get<AnalysisSnapshot>(
+      this.key(symbol)
+    );
   }
 
+  /**
+   * Save or overwrite a snapshot.
+   */
   static save(
     snapshot: AnalysisSnapshot
-  ) {
-    this.cache.set(
-      snapshot.symbol.toUpperCase(),
-      snapshot
+  ): void {
+    CoreCache.set(
+      this.key(snapshot.symbol),
+      snapshot,
+      this.SNAPSHOT_TTL
     );
   }
 
+  /**
+   * Determine whether a snapshot exists.
+   */
   static has(
     symbol: string
-  ) {
-    return this.cache.has(
-      symbol.toUpperCase()
+  ): boolean {
+    return CoreCache.has(
+      this.key(symbol)
     );
   }
 
-  static clear() {
-    this.cache.clear();
+  /**
+   * Delete one market snapshot.
+   */
+  static delete(
+    symbol: string
+  ): void {
+    CoreCache.delete(
+      this.key(symbol)
+    );
+  }
+
+  /**
+   * Remove every saved study snapshot.
+   */
+  static clear(): void {
+    const keys =
+      CoreCache.keys();
+
+    for (const key of keys) {
+      if (
+        key.startsWith(
+          "snapshot:"
+        )
+      ) {
+        CoreCache.delete(key);
+      }
+    }
   }
 }
