@@ -47,74 +47,119 @@ export class ConfluenceEngine {
       displacement: 0,
     };
 
-    // 20
+    /* ---------------------------------- */
+    /* Market Structure (25)              */
+    /* ---------------------------------- */
+
     if (
       structure.latestEvent === "bos" ||
-      structure.latestEvent === "mss" ||
+      structure.latestEvent === "mss"
+    ) {
+      breakdown.structure = 25;
+      score += 25;
+      confirmations++;
+    } else if (
       structure.latestEvent === "choch"
     ) {
-      breakdown.structure = 20;
-      score += 20;
+      breakdown.structure = 18;
+      score += 18;
       confirmations++;
     }
 
-    // 20
-    if (liquidity.latestSweep?.detected) {
+    /* ---------------------------------- */
+    /* Liquidity Sweep (20)               */
+    /* ---------------------------------- */
+
+    if (
+      liquidity.latestSweep?.detected
+    ) {
       breakdown.liquidity = 20;
       score += 20;
       confirmations++;
     }
 
-    // 15
+    /* ---------------------------------- */
+    /* Order Block (15)                   */
+    /* ---------------------------------- */
+
     if (orderBlock) {
       breakdown.orderBlock = 15;
       score += 15;
       confirmations++;
     }
 
-    // 10
+    /* ---------------------------------- */
+    /* Fair Value Gap (10)                */
+    /* ---------------------------------- */
+
     if (fvg) {
       breakdown.fairValueGap = 10;
       score += 10;
       confirmations++;
     }
 
-    // 5
+    /* ---------------------------------- */
+    /* Premium / Discount (10)            */
+    /* ---------------------------------- */
+
     if (
-      premiumDiscount.zone !==
-      "equilibrium"
+      premiumDiscount.zone ===
+      "discount"
     ) {
-      breakdown.premiumDiscount = 5;
-      score += 5;
+      breakdown.premiumDiscount = 10;
+      score += 10;
+      confirmations++;
+    } else if (
+      premiumDiscount.zone ===
+      "premium"
+    ) {
+      breakdown.premiumDiscount = 8;
+      score += 8;
       confirmations++;
     }
 
-    // 30
-    if (displacement.detected) {
-      const bonus = Math.round(
-        (displacement.strength / 100) * 30
-      );
+    /* ---------------------------------- */
+    /* Displacement (20)                  */
+    /* ---------------------------------- */
 
-      breakdown.displacement = bonus;
-      score += bonus;
+    if (
+      displacement.detected
+    ) {
+      const weighted =
+        Math.round(
+          (Math.min(
+            displacement.strength,
+            100
+          ) /
+            100) *
+            20
+        );
+
+      breakdown.displacement =
+        weighted;
+
+      score += weighted;
+
       confirmations++;
     }
+
+    score = Math.min(score, 100);
 
     const grade =
       score >= 90
         ? "A+"
-        : score >= 75
+        : score >= 80
         ? "A"
-        : score >= 55
+        : score >= 65
         ? "B"
         : "C";
 
     return {
-      score: Math.min(score, 100),
+      score,
       grade,
       confirmations,
       breakdown,
-      valid: score >= 55,
+      valid: score >= 65,
     };
   }
 }
