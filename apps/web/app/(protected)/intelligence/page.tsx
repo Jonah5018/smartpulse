@@ -80,6 +80,10 @@ import {
   ExecutionChecklistCard,
 } from "@/components/intelligence/execution-checklist-card";
 
+import { 
+  MarketStructureTimeline, 
+} from "@/components/intelligence/market-structure-timeline";
+
 interface IntelligencePageProps {
   searchParams: Promise<{
     symbol?: string;
@@ -613,6 +617,9 @@ export default async function IntelligencePage({
           <TopDownAnalysisCard setup={liveIntelligence.setup} />
           {confluence && (
             <>
+              <MarketStructureTimeline
+                setup={liveIntelligence.setup}
+              />
               <ConfluenceMatrixCard matrix={confluence} />
               <ExecutionChecklistCard 
                 setup={liveIntelligence.setup} 
