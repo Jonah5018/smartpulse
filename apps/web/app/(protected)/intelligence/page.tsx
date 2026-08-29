@@ -37,7 +37,7 @@ import {
 } from "@/components/intelligence/macro-intelligence-card";
 
 import {
-  LiquidityHeatmapCard,
+  LiquidityLadderCard,
 } from "@/components/liquidity";
 
 import {
@@ -614,8 +614,8 @@ export default async function IntelligencePage({
             decision={liveIntelligence.decision}
          />
 
-         <LiquidityHeatmapCard
-           analysis={liquidityAnalysis}
+         <LiquidityLadderCard
+           analysis={liquidityAnalysis as any}
          />
 
          <MarketRegimeCard
