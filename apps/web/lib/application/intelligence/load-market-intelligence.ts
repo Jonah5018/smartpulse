@@ -53,7 +53,7 @@ import {
 
 import {
   AnalysisCache,
-} from "@/lib/analysis-cache";
+} from "@/lib/analysis-cache/analysis-cache";
 
 interface MarketAnalysis {
   setup: InstitutionalSetup;
@@ -104,17 +104,14 @@ export class LoadMarketIntelligence {
     const cacheKey =
       `analysis:${normalizedRequestedSymbol}`;
 
-    const cached =
-      AnalysisCache.get<
-        Awaited<
-          ReturnType<
-            typeof LoadMarketIntelligence.execute
-          >
-        >
-      >(cacheKey);
+    const cached = AnalysisCache.get(cacheKey);
 
     if (cached) {
-      return cached;
+      return cached as Awaited<
+         ReturnType<
+          typeof LoadMarketIntelligence.execute
+        >
+      >;
     }
 
     /*

@@ -68,9 +68,7 @@ import {
   TopDownService,
 } from "@/lib/top-down";
 
-import {
-  TopDownReportCard,
-} from "@/components/intelligence/top-down-report-card";
+import { TopDownAnalysisCard } from "@/components/intelligence/top-down-analysis-card";
 
 interface IntelligencePageProps {
   searchParams: Promise<{
@@ -607,9 +605,7 @@ export default async function IntelligencePage({
           --------------------------------------- */
 
         <div className="space-y-6">
-          {topDown && (
-            <TopDownReportCard report={topDown} />
-          )}
+          <TopDownAnalysisCard setup={liveIntelligence.setup} />
           {confluence && (
             <ConfluenceMatrixCard matrix={confluence} />
           )}
