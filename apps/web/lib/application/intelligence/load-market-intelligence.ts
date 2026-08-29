@@ -53,7 +53,8 @@ import {
 
 import {
   AnalysisCache,
-} from "@/lib/analysis-cache/analysis-cache";
+  AnalysisCacheService,
+} from "@/lib/analysis-cache";
 
 interface MarketAnalysis {
   setup: InstitutionalSetup;
@@ -101,17 +102,23 @@ export class LoadMarketIntelligence {
      * ANALYSIS CACHE
      * ------------------------------------------------
      */
-    const cacheKey =
-      `analysis:${normalizedRequestedSymbol}`;
-
-    const cached = AnalysisCache.get(cacheKey);
+    const cached =
+      AnalysisCacheService.get(
+        normalizedRequestedSymbol
+    );
 
     if (cached) {
-      return cached as Awaited<
-         ReturnType<
-          typeof LoadMarketIntelligence.execute
-        >
-      >;
+      return {
+        ...cached,
+        session,
+        marketSelection: null,
+        aiBrief: null,
+        marketClosed: false,
+        marketAvailability:
+          MarketAvailabilityService.current(
+            normalizedRequestedSymbol
+          ),
+      };
     }
 
     /*
@@ -137,41 +144,38 @@ export class LoadMarketIntelligence {
      * MARKET CLOSED
      * ------------------------------------------------
      */
-    if (
-      !requestedAvailability.isOpen
-    ) {
-      const result = {
-        symbol:
-          normalizedRequestedSymbol,
+    if (!requestedAvailability.isOpen) {
+      const snapshot =
+        AnalysisCacheService.get(
+          normalizedRequestedSymbol
+    );
 
-        session,
-
-        setup: null,
-
-        opportunity: null,
-
-        focus: null,
-
-        decision: null,
-
-        marketSelection: null,
-
-        aiBrief: null,
-
-        marketClosed: true,
-
-        marketAvailability:
-          requestedAvailability,
-      };
-
-      AnalysisCache.set(
-        cacheKey,
-        result,
-        60
-      );
-
-      return result;
+    if (snapshot) {
+      return {
+      ...snapshot,
+      session,
+      marketClosed: true,
+      marketAvailability:
+        requestedAvailability,
+      marketSelection: null,
+      aiBrief: null,
+     };
     }
+
+    return {
+      symbol: normalizedRequestedSymbol,
+      session,
+      setup: null,
+      opportunity: null,
+      focus: null,
+      decision: null,
+      marketSelection: null,
+      aiBrief: null,
+      marketClosed: true,
+      marketAvailability:
+        requestedAvailability,
+    };
+}
 
     /*
      * ------------------------------------------------
@@ -331,7 +335,7 @@ export class LoadMarketIntelligence {
       };
 
       AnalysisCache.set(
-        cacheKey,
+        normalizedRequestedSymbol,
         result,
         60
       );
@@ -362,6 +366,9 @@ export class LoadMarketIntelligence {
       decision:
         finalAnalysis.decision,
 
+      generatedAt:
+        new Date().toISOString(),
+
       marketSelection,
 
       aiBrief,
@@ -371,17 +378,7 @@ export class LoadMarketIntelligence {
       marketAvailability:
         requestedAvailability,
     };
-
-    /*
-     * ------------------------------------------------
-     * STORE ANALYSIS CACHE
-     * ------------------------------------------------
-     */
-    AnalysisCache.set(
-      cacheKey,
-      result,
-      60
-    );
+    AnalysisCacheService.save(result);
 
     return result;
   }
