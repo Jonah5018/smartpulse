@@ -70,6 +70,8 @@ import {
 
 import { TopDownAnalysisCard } from "@/components/intelligence/top-down-analysis-card";
 
+import { WeekendStudyCard } from "@/components/intelligence/weekend-study-card";
+
 interface IntelligencePageProps {
   searchParams: Promise<{
     symbol?: string;
@@ -516,86 +518,81 @@ export default async function IntelligencePage({
           </div>
 
 
-        ) : intelligence?.marketClosed ? (
+       ) : intelligence?.marketClosed ? (
 
-          /* ---------------------------------------
-             MARKET CLOSED
-          --------------------------------------- */
+  /* ---------------------------------------
+     MARKET CLOSED + WEEKEND STUDY
+  --------------------------------------- */
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8">
+  <div className="space-y-6">
 
-            <div className="space-y-4">
+    {/* Market Status Card */}
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8">
+      <div className="space-y-4">
+        <p className="text-sm uppercase tracking-[0.18em] text-blue-500">
+          Market Status
+        </p>
 
-              <p className="text-sm uppercase tracking-[0.18em] text-blue-500">
-                Market Status
-              </p>
+        <h2 className="text-2xl font-semibold">
+          Market Closed
+        </h2>
 
+        <p className="max-w-2xl text-slate-400">
+          Institutional market analysis is paused while the forex market is
+          closed.
+        </p>
 
-              <h2 className="text-2xl font-semibold">
-                Market Closed
-              </h2>
+        <div className="flex flex-wrap gap-6 pt-2">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-slate-500">
+              Current Session
+            </p>
 
-
-              <p className="max-w-2xl text-slate-400">
-                Institutional market analysis is
-                paused while the forex market is
-                closed.
-              </p>
-
-
-              <div className="flex flex-wrap gap-6 pt-2">
-
-                <div>
-
-                  <p className="text-xs uppercase tracking-wider text-slate-500">
-                    Current Session
-                  </p>
-
-
-                  <p className="mt-1 font-medium text-slate-200">
-                    {intelligence.session.current}
-                  </p>
-
-                </div>
-
-
-                <div>
-
-                  <p className="text-xs uppercase tracking-wider text-slate-500">
-                    Next Session
-                  </p>
-
-
-                  <p className="mt-1 font-medium text-blue-400">
-                    {intelligence.session.nextSession}
-                  </p>
-
-                </div>
-
-              </div>
-
-
-              {intelligence.session.nextSessionStartsAt && (
-
-                <p className="text-sm text-slate-500">
-                  Opens at{" "}
-                  {new Date(
-                    intelligence.session.nextSessionStartsAt
-                  ).toLocaleString()}
-                </p>
-
-              )}
-
-
-              <p className="pt-2 text-sm text-slate-500">
-                SmartPulse will resume institutional
-                analysis when the next trading session
-                opens.
-              </p>
-
-            </div>
-
+            <p className="mt-1 font-medium text-slate-200">
+              {intelligence.session.current}
+            </p>
           </div>
+
+          <div>
+            <p className="text-xs uppercase tracking-wider text-slate-500">
+              Next Session
+            </p>
+
+            <p className="mt-1 font-medium text-blue-400">
+              {intelligence.session.nextSession}
+            </p>
+          </div>
+        </div>
+
+        {intelligence.session.nextSessionStartsAt && (
+          <p className="text-sm text-slate-500">
+            Opens at{" "}
+            {new Date(
+              intelligence.session.nextSessionStartsAt
+            ).toLocaleString()}
+          </p>
+        )}
+      </div>
+    </div>
+
+    {/* Weekend Study Mode */}
+    {intelligence.setup && (
+      <WeekendStudyCard
+        setup={intelligence.setup}
+        symbol={intelligence.symbol}
+      />
+    )}
+
+    {!intelligence.session.isOpen && (
+      <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-6">
+        <p className="pt-2 text-sm text-slate-500">
+          SmartPulse will resume institutional
+          analysis when the next trading session
+          opens.
+        </p>
+      </div>
+    )}
+  </div>
 
 
         ) : liveIntelligence ? (
