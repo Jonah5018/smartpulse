@@ -14,6 +14,10 @@ import type {
   InstitutionalExplanation,
 } from "@/lib/institutional/explainability";
 
+import type {
+  ExecutionReadiness,
+} from "@/lib/execution-readiness";
+
 export type SetupDirection =
   | "buy"
   | "sell"
@@ -65,6 +69,8 @@ export interface InstitutionalSetup {
   confidence: number;
 
   confluence: ConfluenceResult;
+
+  executionReadiness: ExecutionReadiness;
 
   explainability: InstitutionalExplanation;
 

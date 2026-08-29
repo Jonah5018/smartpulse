@@ -79,6 +79,10 @@ import {
   ExplainabilityEngine,
 } from "@/lib/institutional/explainability";
 
+import {
+  ExecutionReadinessService,
+} from "@/lib/execution-readiness";
+
 export class InstitutionalSetupEngine {
   /**
    * Default intraday profile.
@@ -344,14 +348,16 @@ export class InstitutionalSetupEngine {
           null
       );
 
-    const state =
-      this.determineState(
-        direction,
-        directionalAlignment,
+    const executionReadiness =
+      ExecutionReadinessService.evaluate(
+        confluence,
         selectedFVG !== null,
-        displacementDirection,
-        riskReward
-      );
+        riskReward !== null,
+        directionalAlignment
+    );
+
+    const state =
+      executionReadiness.state;
 
     const setupContext =
       this.determineSetupContext(
@@ -404,6 +410,8 @@ export class InstitutionalSetupEngine {
       confidence,
 
       confluence,
+
+      executionReadiness,
 
       explainability:
         explanationModel,
@@ -1339,6 +1347,15 @@ export class InstitutionalSetupEngine {
         },
         valid: false,
       },
+      executionReadiness: {
+        state: "no_setup",
+        score: 0,
+        confirmations: [],
+        missing: [
+          "Market is unavailable.",
+     ],
+      explanation: reason,
+     },
 
       explainability: {
         headline:
