@@ -110,7 +110,11 @@ export class OpportunityEngine {
         setup.liquiditySweep,
 
       displacement:
-        setup.displacement.direction,
+        setup.displacement?.direction === "bullish"
+          ? "bullish"
+          : setup.displacement?.direction === "bearish"
+            ? "bearish"
+            : null,
 
       entryZone:
         setup.entryZone,

@@ -128,6 +128,12 @@ export class MarketSessionEngine {
       };
     }
 
+    /*
+     * Forex market closed.
+     *
+     * Use deterministic weekend reopening logic
+     * instead of the Sydney session utility.
+     */
     return {
       current: "closed",
 
@@ -139,13 +145,66 @@ export class MarketSessionEngine {
       nextSession: "sydney",
 
       nextSessionStartsAt:
-        MarketSessionUtils.nextSessionStart(
-          "sydney",
-          date
-        ),
+        this.getNextForexOpen(date).toISOString(),
 
       overlap: "none",
     };
+  }
+
+  /**
+   * Forex reopens every Sunday at 23:00
+   * Africa/Lagos (22:00 UTC during this period).
+   */
+  private static getNextForexOpen(
+    date: Date
+  ): Date {
+    const lagos = new Date(
+      date.toLocaleString(
+        "en-US",
+        {
+          timeZone:
+            "Africa/Lagos",
+        }
+      )
+    );
+
+    const day =
+      lagos.getDay();
+
+    const next =
+      new Date(lagos);
+
+    if (day === 6) {
+      // Saturday → Sunday
+      next.setDate(
+        next.getDate() + 1
+      );
+    } else if (day === 0) {
+      // Sunday before 23:00
+      if (
+        next.getHours() >= 23
+      ) {
+        return next;
+      }
+    } else {
+      // Monday–Friday fallback
+      const daysUntilSunday =
+        (7 - day) % 7;
+
+      next.setDate(
+        next.getDate() +
+          daysUntilSunday
+      );
+    }
+
+    next.setHours(
+      23,
+      0,
+      0,
+      0
+    );
+
+    return next;
   }
 
   private static activeSessions(
