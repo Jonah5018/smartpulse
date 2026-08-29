@@ -90,7 +90,9 @@ export function LiquidityLadderCard({
 
             <p className="text-sm text-slate-400">
               Liquidity engineered at{" "}
-              {sweep.price.toFixed(5)}
+              {sweep.price != null
+                ? sweep.price.toFixed(5)
+                : "—"}
             </p>
           </>
         ) : (
