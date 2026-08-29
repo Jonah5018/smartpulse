@@ -68,9 +68,17 @@ import {
   TopDownService,
 } from "@/lib/top-down";
 
-import { TopDownAnalysisCard } from "@/components/intelligence/top-down-analysis-card";
+import { 
+  TopDownAnalysisCard, 
+} from "@/components/intelligence/top-down-analysis-card";
 
-import { InstitutionalSnapshotCard } from "@/components/intelligence/institutional-snapshot-card";
+import { 
+  InstitutionalSnapshotCard,
+} from "@/components/intelligence/institutional-snapshot-card";
+
+import { 
+  ExecutionChecklistCard,
+} from "@/components/intelligence/execution-checklist-card";
 
 interface IntelligencePageProps {
   searchParams: Promise<{
@@ -604,7 +612,12 @@ export default async function IntelligencePage({
         <div className="space-y-6">
           <TopDownAnalysisCard setup={liveIntelligence.setup} />
           {confluence && (
-            <ConfluenceMatrixCard matrix={confluence} />
+            <>
+              <ConfluenceMatrixCard matrix={confluence} />
+              <ExecutionChecklistCard 
+                setup={liveIntelligence.setup} 
+              />
+            </>
           )}
           <MarketIntelligence
             symbol={liveIntelligence.symbol}
