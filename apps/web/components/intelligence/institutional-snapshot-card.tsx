@@ -5,7 +5,7 @@ interface Props {
   symbol: string;
 }
 
-export function WeekendStudyCard({
+export function InstitutionalSnapshotCard({
   setup,
   symbol,
 }: Props) {
@@ -21,7 +21,7 @@ export function WeekendStudyCard({
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-blue-400">
-            Weekend Study Mode
+            Institutional Snapshot
           </p>
 
           <h2 className="mt-2 text-3xl font-bold text-white">
@@ -29,7 +29,7 @@ export function WeekendStudyCard({
           </h2>
 
           <p className="mt-1 text-sm text-slate-400">
-            Last institutional analysis
+            Last completed institutional analysis
           </p>
         </div>
 
@@ -67,7 +67,7 @@ export function WeekendStudyCard({
           Institutional Narrative
         </p>
 
-        <p className="mt-3 text-sm leading-7 text-slate-200 whitespace-pre-line">
+        <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-200">
           {setup.explanation}
         </p>
       </div>

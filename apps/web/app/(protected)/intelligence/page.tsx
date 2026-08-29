@@ -70,7 +70,7 @@ import {
 
 import { TopDownAnalysisCard } from "@/components/intelligence/top-down-analysis-card";
 
-import { WeekendStudyCard } from "@/components/intelligence/weekend-study-card";
+import { InstitutionalSnapshotCard } from "@/components/intelligence/institutional-snapshot-card";
 
 interface IntelligencePageProps {
   searchParams: Promise<{
@@ -577,7 +577,7 @@ export default async function IntelligencePage({
 
     {/* Weekend Study Mode */}
     {intelligence.setup && (
-      <WeekendStudyCard
+      <InstitutionalSnapshotCard
         setup={intelligence.setup}
         symbol={intelligence.symbol}
       />
