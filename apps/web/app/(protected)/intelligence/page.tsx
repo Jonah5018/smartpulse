@@ -84,6 +84,12 @@ import {
   MarketStructureTimeline, 
 } from "@/components/intelligence/market-structure-timeline";
 
+import { 
+  AIInstitutionalMentorCard, 
+} from "@/components/intelligence/ai-institutional-mentor-card";
+
+import { MarketBrowser } from "@/components/intelligence/market-browser";
+
 interface IntelligencePageProps {
   searchParams: Promise<{
     symbol?: string;
@@ -122,7 +128,6 @@ export default async function IntelligencePage({
   const defaultSymbol =
     allowedSymbols[0] ??
     "GBP/USD";
-
 
   const requestedSymbol =
     params.symbol?.trim() ??
@@ -364,8 +369,14 @@ export default async function IntelligencePage({
 
 
         {/* -----------------------------------------
-            MARKET SELECTOR
+            MARKET BROWSER
         ----------------------------------------- */}
+        <MarketBrowser
+           selected={symbol}
+           onSelect={(newSymbol) => {
+             window.location.href = `/intelligence?symbol=${encodeURIComponent(newSymbol)}`;
+           }}
+        />
 
         <section>
 
@@ -623,6 +634,9 @@ export default async function IntelligencePage({
               <ConfluenceMatrixCard matrix={confluence} />
               <ExecutionChecklistCard 
                 setup={liveIntelligence.setup} 
+              />
+              <AIInstitutionalMentorCard
+                setup={liveIntelligence.setup}
               />
             </>
           )}
