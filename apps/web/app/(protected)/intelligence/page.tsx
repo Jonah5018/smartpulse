@@ -380,12 +380,7 @@ export default async function IntelligencePage({
         {/* -----------------------------------------
             MARKET BROWSER
         ----------------------------------------- */}
-        <MarketBrowser
-           selected={symbol}
-           onSelect={(newSymbol) => {
-             window.location.href = `/intelligence?symbol=${encodeURIComponent(newSymbol)}`;
-           }}
-        />
+        <MarketBrowser selected={symbol} />
 
         <section>
 
