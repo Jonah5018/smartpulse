@@ -88,7 +88,13 @@ import {
   AIInstitutionalMentorCard, 
 } from "@/components/intelligence/ai-institutional-mentor-card";
 
-import { MarketBrowser } from "@/components/intelligence/market-browser";
+import { 
+  MarketBrowser, 
+} from "@/components/intelligence/market-browser";
+
+import { 
+  OpportunityRankingBoard, 
+} from "@/components/intelligence/opportunity-ranking-board";
 
 interface IntelligencePageProps {
   searchParams: Promise<{
@@ -226,6 +232,9 @@ export default async function IntelligencePage({
 
           decision:
             intelligence.decision,
+
+          marketSelection:
+            intelligence.marketSelection,
           
           aiBrief:
             intelligence.aiBrief,
@@ -625,6 +634,14 @@ export default async function IntelligencePage({
           --------------------------------------- */
 
         <div className="space-y-6">
+
+          {liveIntelligence.marketSelection && (
+            <OpportunityRankingBoard
+              marketSelection={liveIntelligence.marketSelection}
+              selected={liveIntelligence.symbol}
+            />
+          )}
+
           <TopDownAnalysisCard setup={liveIntelligence.setup} />
           {confluence && (
             <>
