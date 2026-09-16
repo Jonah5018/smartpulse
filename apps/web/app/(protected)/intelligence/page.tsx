@@ -64,10 +64,6 @@ import {
   LoadMacroContext,
 } from "@/lib/application/macro-context/load-macro-context";
 
-import {
-  TopDownService,
-} from "@/lib/top-down";
-
 import { 
   TopDownAnalysisCard, 
 } from "@/components/intelligence/top-down-analysis-card";
@@ -95,6 +91,10 @@ import {
 import { 
   OpportunityRankingBoard, 
 } from "@/components/intelligence/opportunity-ranking-board";
+
+import {
+  AITradeJournalCard,
+} from "@/components/intelligence/ai-trade-journal-card";
 
 interface IntelligencePageProps {
   searchParams: Promise<{
@@ -215,7 +215,8 @@ export default async function IntelligencePage({
     intelligence.setup &&
     intelligence.opportunity &&
     intelligence.focus &&
-    intelligence.decision
+    intelligence.decision &&
+    intelligence.tradeJournal
 
       ? {
           symbol:
@@ -238,6 +239,9 @@ export default async function IntelligencePage({
           
           aiBrief:
             intelligence.aiBrief,
+
+          tradeJournal:
+            intelligence.tradeJournal,
         }
 
       : null;
@@ -265,11 +269,6 @@ export default async function IntelligencePage({
             macroContext
          )
          : null;
-
-    const topDown =
-      liveIntelligence
-        ? await TopDownService.current(symbol)
-        : null; 
 
   /*
    * ------------------------------------------------
@@ -637,6 +636,12 @@ export default async function IntelligencePage({
             />
           )}
 
+          <AITradeJournalCard
+            journal={
+              liveIntelligence.tradeJournal
+            }
+          />
+
           <TopDownAnalysisCard setup={liveIntelligence.setup} />
           {confluence && (
             <>
@@ -661,7 +666,7 @@ export default async function IntelligencePage({
          />
 
          <LiquidityLadderCard
-           analysis={liquidityAnalysis as any}
+           analysis={liquidityAnalysis}
          />
 
          <MarketRegimeCard

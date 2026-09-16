@@ -1,14 +1,21 @@
 import OpenAI from "openai";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export class OpenAIProvider {
   static async generate(
     system: string,
     user: string
   ): Promise<string> {
+    const apiKey =
+      process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return "AI briefing unavailable.";
+    }
+
+    const client = new OpenAI({
+      apiKey,
+    });
+
     const response =
       await client.responses.create({
         model: "gpt-5",

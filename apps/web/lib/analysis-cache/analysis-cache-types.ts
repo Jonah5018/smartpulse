@@ -14,6 +14,10 @@ import type {
   OpportunityDecision,
 } from "@/lib/decision";
 
+import type {
+  AITradeJournal,
+} from "@/lib/trade-journal";
+
 export interface AnalysisSnapshot {
   symbol: string;
 
@@ -26,4 +30,6 @@ export interface AnalysisSnapshot {
   focus: FocusScore;
 
   decision: OpportunityDecision;
+
+  tradeJournal: AITradeJournal;
 }

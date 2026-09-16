@@ -56,6 +56,14 @@ import {
   AnalysisCacheService,
 } from "@/lib/analysis-cache";
 
+import {
+  TradeJournalService,
+} from "@/lib/trade-journal";
+
+import type {
+  AITradeJournal,
+} from "@/lib/trade-journal";
+
 interface MarketAnalysis {
   setup: InstitutionalSetup;
   opportunity: Opportunity;
@@ -76,6 +84,7 @@ export class LoadMarketIntelligence {
     decision: OpportunityDecision | null;
     marketSelection: ReturnType<typeof MarketSelectionService.select> | null;
     aiBrief: Awaited<ReturnType<typeof AIIntelligenceService.generateBrief>> | null;
+    tradeJournal: AITradeJournal | null;
     marketClosed: boolean;
     marketAvailability: ReturnType<typeof MarketAvailabilityService.current>;
   }> {
@@ -171,6 +180,7 @@ export class LoadMarketIntelligence {
       decision: null,
       marketSelection: null,
       aiBrief: null,
+      tradeJournal: null,
       marketClosed: true,
       marketAvailability:
         requestedAvailability,
@@ -328,6 +338,8 @@ export class LoadMarketIntelligence {
 
         aiBrief: null,
 
+        tradeJournal: null,
+
         marketClosed: false,
 
         marketAvailability:
@@ -372,6 +384,11 @@ export class LoadMarketIntelligence {
       marketSelection,
 
       aiBrief,
+
+      tradeJournal:
+        TradeJournalService.fromInstitutionalSetup(
+          finalAnalysis.setup
+        ),
 
       marketClosed: false,
 

@@ -1,9 +1,9 @@
 import type {
-  LiquidityMap,
-} from "@/lib/institutional/liquidity";
+  LiquidityAnalysis,
+} from "@/lib/liquidity";
 
 interface Props {
-  analysis: LiquidityMap;
+  analysis: LiquidityAnalysis;
 }
 
 export function LiquidityLadderCard({
