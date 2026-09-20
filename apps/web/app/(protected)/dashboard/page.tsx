@@ -363,7 +363,7 @@ export default async function DashboardPage() {
 
                   This opportunity was discovered
                   outside your current watchlist
-                  and passed SmartPulse's discovery
+                  and passed SmartPulse&apos;s discovery
                   threshold.
 
                 </p>

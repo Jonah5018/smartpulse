@@ -102,7 +102,7 @@ export function MacroIntelligenceCard({ analysis }: Props) {
 
             <p className="mt-1 text-sm text-amber-100">
               Macro intelligence provides market context only. It does not
-              override SmartPulse's confluence score or generate trading signals.
+              override SmartPulse&apos;s confluence score or generate trading signals.
             </p>
           </div>
         </div>

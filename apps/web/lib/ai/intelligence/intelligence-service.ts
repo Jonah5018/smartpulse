@@ -14,6 +14,8 @@ import {
   OpenAIProvider,
 } from "../providers";
 
+import { AnalysisCache } from "@/lib/analysis-cache/analysis-cache";
+
 export class AIIntelligenceService {
   static createPrompt(
     setup: InstitutionalSetup,
@@ -37,9 +39,16 @@ export class AIIntelligenceService {
     const prompt =
       this.createPrompt(setup, macroAnalysis);
 
-    return OpenAIProvider.generate(
+    const key = `ai-brief:${setup.symbol}:${setup.timeframe}`;
+    const signature = JSON.stringify(prompt);
+    const cached = AnalysisCache.get<{ signature: string; brief: string }>(key);
+    if (cached?.signature === signature) return cached.brief;
+
+    const brief = await OpenAIProvider.generate(
       prompt.system,
       prompt.user
     );
+    if (brief) AnalysisCache.set(key, { signature, brief }, 60);
+    return brief;
   }
 }

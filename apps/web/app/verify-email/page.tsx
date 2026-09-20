@@ -9,7 +9,7 @@ export default function VerifyEmailPage() {
         </h1>
 
         <p className="mt-4 text-slate-400">
-          We've sent a verification link to your email address.
+          We&apos;ve sent a verification link to your email address.
         </p>
 
         <p className="mt-2 text-slate-400">
@@ -21,7 +21,7 @@ export default function VerifyEmailPage() {
             href="/login"
             className="block rounded-xl bg-blue-600 px-5 py-3 text-center font-medium text-white hover:bg-blue-500"
           >
-            I've already verified my email
+            I&apos;ve already verified my email
           </Link>
 
           <button

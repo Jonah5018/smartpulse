@@ -11,8 +11,8 @@ export function WelcomeStep({ onStart }: Props) {
       </h2>
 
       <p className="mt-5 text-lg text-gray-300">
-        We'll personalize your workspace based on how you trade,
-        what you want to achieve, and how you'd like to learn.
+        We&apos;ll personalize your workspace based on how you trade,
+        what you want to achieve, and how you&apos;d like to learn.
       </p>
 
       <div className="mt-10 space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6 text-left">

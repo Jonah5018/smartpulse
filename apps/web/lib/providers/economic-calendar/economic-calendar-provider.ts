@@ -55,6 +55,7 @@ export class EconomicCalendarProvider {
           },
 
           cache: "no-store",
+          signal: AbortSignal.timeout(15_000),
         }
       );
 
@@ -131,6 +132,7 @@ export class EconomicCalendarProvider {
           },
 
           cache: "no-store",
+          signal: AbortSignal.timeout(15_000),
         }
       );
 

@@ -10,10 +10,12 @@ export class AnalysisCacheService {
   private static readonly SNAPSHOT_TTL =
     60 * 60 * 24 * 7;
 
+  private static readonly LIVE_TTL_MS = 60 * 1000;
+
   private static key(
     symbol: string
   ) {
-    return `snapshot:${symbol.toUpperCase()}`;
+    return `snapshot:${symbol.trim().toUpperCase()}`;
   }
 
   /**
@@ -25,6 +27,15 @@ export class AnalysisCacheService {
     return CoreCache.get<AnalysisSnapshot>(
       this.key(symbol)
     );
+  }
+
+  /** Return only snapshots fresh enough to represent live conditions. */
+  static getLive(symbol: string): AnalysisSnapshot | null {
+    const snapshot = this.get(symbol);
+    if (!snapshot) return null;
+
+    const age = Date.now() - Date.parse(snapshot.generatedAt);
+    return age >= 0 && age < this.LIVE_TTL_MS ? snapshot : null;
   }
 
   /**

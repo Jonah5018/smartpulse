@@ -7,7 +7,6 @@ interface Entry {
 
   expires: number;
 
-  timestamp: number;
 }
 
 export class MarketCache {
@@ -16,24 +15,27 @@ export class MarketCache {
 
   private static key(
     symbol: string,
-    timeframe: string
+    timeframe: string,
+    outputsize: number
   ) {
-    return `${symbol}:${timeframe}`;
+    return `${symbol.trim().toUpperCase()}:${timeframe}:${outputsize}`;
   }
 
   static get(
     symbol: string,
-    timeframe: string
+    timeframe: string,
+    outputsize = 200
   ): MarketCandle[] | null {
     const item =
       this.store.get(
-        this.key(symbol, timeframe)
+        this.key(symbol, timeframe, outputsize)
       );
 
     if (!item) return null;
 
-    if (Date.now() > item.expires) {
-      return item.candles;
+    if (Date.now() >= item.expires) {
+      this.store.delete(this.key(symbol, timeframe, outputsize));
+      return null;
     }
 
     return item.candles;
@@ -43,13 +45,13 @@ export class MarketCache {
     symbol: string,
     timeframe: string,
     candles: MarketCandle[],
-    ttlSeconds = 60
+    ttlSeconds = 60,
+    outputsize = 200
   ) {
     this.store.set(
-      this.key(symbol, timeframe),
+      this.key(symbol, timeframe, outputsize),
       {
         candles,
-        timestamp: Date.now(),
         expires:
           Date.now() +
           ttlSeconds * 1000,

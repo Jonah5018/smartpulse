@@ -34,7 +34,7 @@ export function DailyBriefingCard({
       <CardHeader className="space-y-3">
         <div>
           <CardTitle className="text-2xl font-bold">
-            Today's Intelligence Brief
+            Today&apos;s Intelligence Brief
           </CardTitle>
 
           <p className="mt-2 text-sm text-slate-400">
@@ -46,7 +46,7 @@ export function DailyBriefingCard({
 
         <div>
           <p className="text-sm text-slate-400">
-            Today's Focus Score
+            Today&apos;s Focus Score
           </p>
 
           <p className="text-5xl font-bold text-blue-500">
@@ -74,7 +74,7 @@ export function DailyBriefingCard({
 
         <section>
           <h3 className="font-semibold text-white">
-            Today's Mission
+            Today&apos;s Mission
           </h3>
 
           <p className="mt-1 text-sm text-slate-400">

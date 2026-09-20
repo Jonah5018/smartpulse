@@ -27,7 +27,7 @@ export interface AnalysisSnapshot {
 
   opportunity: Opportunity;
 
-  focus: FocusScore;
+  focus: FocusScore | null;
 
   decision: OpportunityDecision;
 

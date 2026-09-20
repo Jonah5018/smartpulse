@@ -44,7 +44,7 @@ export class MarketService {
   ): MarketInstrument[] {
     const search = query.trim().toLowerCase();
 
-    let markets =
+    const markets =
       assetClasses && assetClasses.length > 0
         ? this.getMarketsByAssetClasses(assetClasses)
         : this.getAllMarkets();

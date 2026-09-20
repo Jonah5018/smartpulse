@@ -29,10 +29,6 @@ import {
 } from "@/components/intelligence/ai-market-brief";
 
 import {
-  LoadMacroIntelligence,
-} from "@/lib/application/macro/load-macro-intelligence";
-
-import {
   MacroIntelligenceCard,
 } from "@/components/intelligence/macro-intelligence-card";
 
@@ -41,28 +37,12 @@ import {
 } from "@/components/liquidity";
 
 import {
-  LoadLiquidityIntelligence,
-} from "@/lib/application/liquidity/load-liquidity-intelligence";
-
-import {
   MarketRegimeCard,
 } from "@/components/regime";
 
 import {
-  LoadMarketRegime,
-} from "@/lib/application/regime/load-market-regime";
-
-import {
   ConfluenceMatrixCard,
 } from "@/components/confluence";
-
-import {
-  LoadConfluenceMatrix,
-} from "@/lib/application/confluence/load-confluence-matrix";
-
-import {
-  LoadMacroContext,
-} from "@/lib/application/macro-context/load-macro-context";
 
 import { 
   TopDownAnalysisCard, 
@@ -98,7 +78,7 @@ import {
 
 interface IntelligencePageProps {
   searchParams: Promise<{
-    symbol?: string;
+    symbol?: string | string[];
   }>;
 }
 
@@ -136,7 +116,7 @@ export default async function IntelligencePage({
     "GBP/USD";
 
   const requestedSymbol =
-    params.symbol?.trim() ??
+    (Array.isArray(params.symbol) ? params.symbol[0] : params.symbol)?.trim().toUpperCase() ||
     defaultSymbol;
 
 
@@ -214,7 +194,6 @@ export default async function IntelligencePage({
     !intelligence.marketClosed &&
     intelligence.setup &&
     intelligence.opportunity &&
-    intelligence.focus &&
     intelligence.decision &&
     intelligence.tradeJournal
 
@@ -246,29 +225,10 @@ export default async function IntelligencePage({
 
       : null;
 
-    const macroAnalysis =
-      await LoadMacroIntelligence.execute();
-    const liquidityAnalysis =
-      await LoadLiquidityIntelligence.execute(
-        symbol,
-        "15min"
-    );
-
-    const macroContext =
-      await LoadMacroContext.execute();
-
-    const regime =
-      await LoadMarketRegime.execute();
-    
-    const confluence =
-      liveIntelligence
-        ? LoadConfluenceMatrix.execute(
-            liveIntelligence.focus,
-            liquidityAnalysis,
-            regime,
-            macroContext
-         )
-         : null;
+  const macroAnalysis = intelligence?.macroAnalysis ?? null;
+  const liquidityAnalysis = intelligence?.liquidityAnalysis ?? null;
+  const regime = intelligence?.regime ?? null;
+  const confluence = intelligence?.confluence ?? null;
 
   /*
    * ------------------------------------------------
@@ -564,8 +524,7 @@ export default async function IntelligencePage({
         </h2>
 
         <p className="max-w-2xl text-slate-400">
-          Institutional market analysis is paused while the forex market is
-          closed.
+          {intelligence.marketAvailability.reason}
         </p>
 
         <div className="flex flex-wrap gap-6 pt-2">
@@ -609,6 +568,15 @@ export default async function IntelligencePage({
       />
     )}
 
+    {intelligence.tradeJournal && (
+      <div className="space-y-3">
+        <p className="text-sm text-slate-400">
+          Saved study journal from {intelligence.generatedAt}. This is a historical snapshot.
+        </p>
+        <AITradeJournalCard journal={intelligence.tradeJournal} />
+      </div>
+    )}
+
     {!intelligence.session.isOpen && (
       <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-6">
         <p className="pt-2 text-sm text-slate-500">
@@ -629,6 +597,13 @@ export default async function IntelligencePage({
 
         <div className="space-y-6">
 
+          {!!intelligence?.unavailableSections.length && (
+            <p role="status" className="rounded-xl border border-amber-800 bg-amber-950/30 p-4 text-sm text-amber-200">
+              Temporarily unavailable: {intelligence.unavailableSections.join(", ")}.
+              {" "}Available institutional analysis is shown below.
+            </p>
+          )}
+
           {liveIntelligence.marketSelection && (
             <OpportunityRankingBoard
               marketSelection={liveIntelligence.marketSelection}
@@ -643,39 +618,29 @@ export default async function IntelligencePage({
           />
 
           <TopDownAnalysisCard setup={liveIntelligence.setup} />
-          {confluence && (
-            <>
-              <MarketStructureTimeline
-                setup={liveIntelligence.setup}
-              />
-              <ConfluenceMatrixCard matrix={confluence} />
-              <ExecutionChecklistCard 
-                setup={liveIntelligence.setup} 
-              />
-              <AIInstitutionalMentorCard
-                setup={liveIntelligence.setup}
-              />
-            </>
-          )}
-          <MarketIntelligence
+          <MarketStructureTimeline setup={liveIntelligence.setup} />
+          {confluence && <ConfluenceMatrixCard matrix={confluence} />}
+          <ExecutionChecklistCard setup={liveIntelligence.setup} />
+          <AIInstitutionalMentorCard setup={liveIntelligence.setup} />
+          {liveIntelligence.focus && <MarketIntelligence
             symbol={liveIntelligence.symbol}
             setup={liveIntelligence.setup}
             opportunity={liveIntelligence.opportunity}
             focus={liveIntelligence.focus}
             decision={liveIntelligence.decision}
-         />
+         />}
 
-         <LiquidityLadderCard
+         {liquidityAnalysis && <LiquidityLadderCard
            analysis={liquidityAnalysis}
-         />
+         />}
 
-         <MarketRegimeCard
+         {regime && <MarketRegimeCard
             regime={regime}
-         />
+         />}
 
-          <MacroIntelligenceCard
+          {macroAnalysis && <MacroIntelligenceCard
             analysis={macroAnalysis}
-         />
+         />}
 
           <AIMarketBrief
             brief={liveIntelligence.aiBrief}

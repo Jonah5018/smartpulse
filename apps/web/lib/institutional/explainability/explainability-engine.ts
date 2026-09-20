@@ -1,6 +1,6 @@
 import type {
-  MarketStructure,
-} from "@/lib/institutional/market-structure";
+  MarketStructureAnalysis,
+} from "@/lib/market-structure";
 
 import type {
   LiquidityMap,
@@ -25,7 +25,7 @@ import type {
 export class ExplainabilityEngine {
   static generate(
     confluence: ConfluenceResult,
-    structure: MarketStructure,
+    structure: MarketStructureAnalysis,
     liquidity: LiquidityMap,
     orderBlock: OrderBlock | null,
     fvg: unknown | null,
@@ -34,9 +34,9 @@ export class ExplainabilityEngine {
     const confirmations: string[] = [];
     const warnings: string[] = [];
 
-    if (structure.bos?.detected) {
+    if (structure.latestEvent !== "none") {
       confirmations.push(
-        `Break of Structure confirms ${structure.bos.direction} continuation.`
+        `${structure.latestEvent.toUpperCase()} confirms a structural transition on ${structure.timeframe}.`
       );
     }
 
@@ -89,7 +89,7 @@ export class ExplainabilityEngine {
   }
 
   private static buildNarrative(
-    structure: MarketStructure,
+    structure: MarketStructureAnalysis,
     liquidity: LiquidityMap,
     orderBlock: OrderBlock | null,
     displacement: Displacement
@@ -111,6 +111,6 @@ export class ExplainabilityEngine {
         ? "strong displacement confirms institutional participation"
         : "displacement remains weak";
 
-    return `Higher-timeframe structure remains ${trend}. Price is interacting with ${ob}. The latest impulse shows ${impulse}.`;
+    return `${structure.timeframe} execution structure remains ${trend}. Price is interacting with ${ob}. The latest impulse shows ${impulse}.`;
   }
 }

@@ -29,15 +29,6 @@ export class MarketRepository {
       }
     >();
 
-  private static candleCache =
-    new Map<
-      string,
-      {
-        data: MarketCandle[];
-        expiresAt: number;
-      }
-    >();
-
   /*
    * In-flight requests prevent multiple callers
    * from requesting the same provider resource
@@ -68,9 +59,6 @@ export class MarketRepository {
     0;
 
   private static readonly QUOTE_CACHE_DURATION =
-    60 * 1000;
-
-  private static readonly CANDLE_CACHE_DURATION =
     60 * 1000;
 
   private static readonly PROVIDER_COOLDOWN_DURATION =
@@ -311,19 +299,11 @@ export class MarketRepository {
         outputsize,
       ].join("|");
 
-    const now =
-      Date.now();
-
-    /*
-     * ------------------------------------------------
-     * COMPLETED CACHE
-     * ------------------------------------------------
-     */
-
     const memoryCache =
       MarketCache.get(
         normalizedSymbol,
-        interval
+        interval,
+        outputsize
     );
 
     if (memoryCache) {
@@ -338,19 +318,9 @@ export class MarketRepository {
 
     if (
       this.isProviderCoolingDown()
-   ) {
-    const persistent =
-      MarketCache.get(
-        normalizedSymbol,
-        interval
-      );
-
-    if (persistent) {
-      return persistent;
-   }
-
-   throw this.createCooldownError();
-  }
+    ) {
+      throw this.createCooldownError();
+    }
 
     /*
      * ------------------------------------------------
@@ -380,20 +350,12 @@ export class MarketRepository {
         outputsize
       )
         .then((candles) => {
-          this.candleCache.set(
-            cacheKey,
-            {
-              data: candles,
-              expiresAt:
-                Date.now() +
-                this.CANDLE_CACHE_DURATION,
-            }
-          );
           MarketCache.set(
             normalizedSymbol,
             interval,
             candles,
-            60
+            60,
+            outputsize
         );
         return candles;
       })
@@ -404,14 +366,6 @@ export class MarketRepository {
           ) {
             this.markProviderRateLimited(error);
 
-            const fallback = MarketCache.get(
-              normalizedSymbol,
-              interval
-            );
-
-            if (fallback) {
-              return fallback;
-            }
           }
 
           throw error;
@@ -436,8 +390,6 @@ export class MarketRepository {
    */
   static clearCache(): void {
     this.quoteCache.clear();
-
-    this.candleCache.clear();
 
     this.quoteRequests.clear();
 

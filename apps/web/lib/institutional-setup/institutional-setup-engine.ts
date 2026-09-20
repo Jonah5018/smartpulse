@@ -382,7 +382,7 @@ export class InstitutionalSetupEngine {
     const explanationModel =
       ExplainabilityEngine.generate(
         confluence,
-        executionStructure as any,
+        executionStructure,
         liquidityMap,
         orderBlock,
         selectedFVG,

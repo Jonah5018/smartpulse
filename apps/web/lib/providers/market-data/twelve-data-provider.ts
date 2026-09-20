@@ -100,6 +100,7 @@ export class TwelveDataProvider {
             next: {
               revalidate: 60,
             },
+            signal: AbortSignal.timeout(15_000),
           }
         );
 
@@ -207,6 +208,7 @@ export class TwelveDataProvider {
             next: {
               revalidate: 30,
             },
+            signal: AbortSignal.timeout(15_000),
           }
         );
 
@@ -241,8 +243,9 @@ export class TwelveDataProvider {
       process.env.TWELVE_DATA_API_KEY;
 
     if (!apiKey) {
-      throw new Error(
-        "TWELVE_DATA_API_KEY is missing."
+      throw new MarketDataError(
+        "TWELVE_DATA_API_KEY is missing.",
+        { provider: "twelve-data", retryable: false }
       );
     }
 
@@ -559,7 +562,7 @@ export class TwelveDataProvider {
   private static normalizeError(
     error: unknown,
     fallbackMessage: string
-  ): Error {
+  ): MarketDataError {
     if (
       error instanceof
       MarketDataError
@@ -567,15 +570,9 @@ export class TwelveDataProvider {
       return error;
     }
 
-    if (
-      error instanceof
-      Error
-    ) {
-      return error;
-    }
-
-    return new Error(
-      fallbackMessage
+    return new MarketDataError(
+      fallbackMessage,
+      { provider: "twelve-data", retryable: true }
     );
   }
 }

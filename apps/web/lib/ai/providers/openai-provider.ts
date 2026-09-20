@@ -4,16 +4,18 @@ export class OpenAIProvider {
   static async generate(
     system: string,
     user: string
-  ): Promise<string> {
+  ): Promise<string | null> {
     const apiKey =
       process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      return "AI briefing unavailable.";
+      return null;
     }
 
     const client = new OpenAI({
       apiKey,
+      timeout: 20_000,
+      maxRetries: 0,
     });
 
     const response =
@@ -33,8 +35,7 @@ export class OpenAIProvider {
       });
 
     return (
-      response.output_text ??
-      "AI briefing unavailable."
+      response.output_text?.trim() || null
     );
   }
 }

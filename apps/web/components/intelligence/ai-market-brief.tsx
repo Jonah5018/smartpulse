@@ -30,7 +30,7 @@ export function AIMarketBrief({
           </p>
         ) : (
           <p className="text-sm leading-7 text-slate-500">
-            OpenAI is not configured yet. SmartPulse is currently operating in deterministic institutional analysis mode.
+            The AI brief is currently unavailable. The institutional analysis and trade journal remain available when market data can be loaded.
           </p>
         )}
       </div>

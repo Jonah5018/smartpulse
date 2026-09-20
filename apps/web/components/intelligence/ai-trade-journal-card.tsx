@@ -173,6 +173,15 @@ export function AITradeJournalCard({
           </p>
         )}
       </div>
+
+      {journal.warnings.length > 0 && (
+        <div className="mt-6 rounded-2xl border border-amber-900/40 bg-amber-950/20 p-5">
+          <p className="text-xs uppercase tracking-wide text-amber-300">Analysis warnings</p>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-amber-200/80">
+            {journal.warnings.map((warning, index) => <li key={index}>{warning}</li>)}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

@@ -23,7 +23,7 @@ export class AnalysisCache {
     }
 
     if (
-      Date.now() > item.expires
+      Date.now() >= item.expires
     ) {
       this.store.delete(key);
       return null;

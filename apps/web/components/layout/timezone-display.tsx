@@ -1,53 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 import {
   TimezoneService,
 } from "@/lib/timezone";
 
+function subscribeToClock(onChange: () => void) {
+  const interval = window.setInterval(onChange, 1000);
+  return () => window.clearInterval(interval);
+}
+
+function getLocalTime() {
+  return TimezoneService.format(new Date());
+}
+
+function getServerTime() {
+  return null;
+}
+
 export function TimezoneDisplay() {
-  const [timezone, setTimezone] =
-    useState<string | null>(null);
-
-  const [localTime, setLocalTime] =
-    useState<string | null>(null);
-
-  useEffect(() => {
-    const detectedTimezone =
-      TimezoneService.detectBrowserTimezone();
-
-    setTimezone(detectedTimezone);
-
-    const updateTime = () => {
-      setLocalTime(
-        TimezoneService.format(
-          new Date(),
-          {
-            mode: "auto",
-            timezone: null,
-          },
-          {
-            dateStyle: "medium",
-            timeStyle: "short",
-          }
-        )
-      );
-    };
-
-    updateTime();
-
-    const interval =
-      window.setInterval(
-        updateTime,
-        1000
-      );
-
-    return () =>
-      window.clearInterval(
-        interval
-      );
-  }, []);
+  const localTime = useSyncExternalStore(subscribeToClock, getLocalTime, getServerTime);
+  const timezone = localTime ? TimezoneService.detectBrowserTimezone() : null;
 
   if (!timezone || !localTime) {
     return (
