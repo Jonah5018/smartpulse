@@ -38,7 +38,7 @@ export class ConfluenceEngine {
       );
 
     const regimeValue =
-      regime.regime === "trend"
+      regime.confidence === 0 ? 0 : regime.regime === "trend"
         ? 15
         : regime.regime === "range"
         ? 10

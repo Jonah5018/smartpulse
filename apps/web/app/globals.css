@@ -128,3 +128,50 @@
     @apply font-sans;
   }
 }
+
+@layer components {
+  .sp-workspace { --color-slate-500: #8796ae; }
+  .light .sp-workspace {
+    --color-slate-950: #f5f7fb;
+    --color-slate-900: #ffffff;
+    --color-slate-800: #dce3ed;
+    --color-slate-700: #c2cedd;
+    --color-slate-600: #66758c;
+    --color-slate-500: #596b83;
+    --color-slate-400: #4b5d75;
+    --color-slate-300: #334155;
+    --color-slate-200: #1e293b;
+    --color-slate-100: #0f172a;
+    --color-blue-950: #eff6ff;
+    --color-blue-900: #dbeafe;
+    --color-blue-800: #93c5fd;
+    --color-blue-500: #2563eb;
+    --color-blue-400: #1d4ed8;
+    --color-blue-300: #1d4ed8;
+    --color-teal-950: #f0fdfa;
+    --color-teal-300: #0f766e;
+    --color-teal-400: #0f766e;
+    --color-emerald-300: #047857;
+    --color-emerald-400: #047857;
+    --color-green-400: #15803d;
+    --color-amber-950: #fffbeb;
+    --color-amber-200: #92400e;
+    --color-amber-300: #92400e;
+    --color-amber-400: #b45309;
+    --color-rose-300: #be123c;
+    --color-red-400: #b91c1c;
+  }
+  .light .sp-workspace .text-white:not(button):not(a) { color: #0f172a; }
+  .light .sp-workspace .sp-input { color-scheme: light; }
+  .sp-panel { @apply min-w-0 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5 sm:p-6; }
+  .sp-eyebrow { @apply text-xs font-medium tracking-wider text-blue-400; }
+  .sp-label { @apply flex min-w-0 flex-col gap-2 text-sm font-medium text-slate-300; }
+  .sp-input { @apply w-full min-w-0 rounded-xl border border-slate-700 bg-slate-950/80 px-3.5 py-3 text-sm font-normal text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:opacity-40; color-scheme: dark; }
+  .sp-button-primary { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-400 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400 disabled:cursor-wait disabled:opacity-50; }
+  .sp-button-secondary { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/50 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:border-slate-500 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400 disabled:opacity-50; }
+  .sp-notice { @apply rounded-xl border border-amber-700/40 bg-amber-950/20 px-4 py-3 text-sm leading-6 text-amber-200; }
+  .sp-badge { @apply inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-slate-700 px-2.5 py-1 text-xs font-medium capitalize text-slate-300; }
+  .sp-disclosure { @apply overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/20; }
+  .sp-disclosure > summary { @apply cursor-pointer px-5 py-5 text-sm font-medium text-slate-200 transition hover:bg-slate-800/40 focus-visible:outline-2 focus-visible:outline-blue-400 sm:px-6; }
+  .sp-disclosure[open] > summary { @apply border-b border-slate-800; }
+}

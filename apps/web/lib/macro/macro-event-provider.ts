@@ -62,7 +62,8 @@ export class MacroEventProvider {
     if (normalized.includes("AUD")) return "AUD";
     if (normalized.includes("NZD")) return "NZD";
 
-    return "CAD";
+    if (normalized.includes("CAD")) return "CAD";
+    return "UNKNOWN";
   }
 }
 

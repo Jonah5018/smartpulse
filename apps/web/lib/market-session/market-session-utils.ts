@@ -3,6 +3,20 @@ import type {
 } from "./market-session-types";
 
 export class MarketSessionUtils {
+  private static readonly sessionFormatters = new Map<string, Intl.DateTimeFormat>();
+
+  private static sessionFormatter(timezone: string, unit: "hour" | "minute") {
+    const key = timezone + ":" + unit;
+    let formatter = this.sessionFormatters.get(key);
+    if (!formatter) {
+      formatter = new Intl.DateTimeFormat("en-US", unit === "hour"
+        ? { timeZone: timezone, hour: "numeric", hour12: false, hourCycle: "h23" }
+        : { timeZone: timezone, minute: "numeric" });
+      this.sessionFormatters.set(key, formatter);
+    }
+    return formatter;
+  }
+
   static utcHour(
     date = new Date()
   ): number {
@@ -206,23 +220,7 @@ export class MarketSessionUtils {
       return null;
     }
 
-    const parts =
-      new Intl.DateTimeFormat(
-        "en-US",
-        {
-          timeZone:
-            timezone,
-
-          hour:
-            "numeric",
-
-          hour12:
-            false,
-
-          hourCycle:
-            "h23",
-        }
-      ).formatToParts(date);
+    const parts = this.sessionFormatter(timezone, "hour").formatToParts(date);
 
     const hour =
       parts.find(
@@ -304,17 +302,7 @@ export class MarketSessionUtils {
       return null;
     }
 
-    const parts =
-      new Intl.DateTimeFormat(
-        "en-US",
-        {
-          timeZone:
-            timezone,
-
-          minute:
-            "numeric",
-        }
-      ).formatToParts(date);
+    const parts = this.sessionFormatter(timezone, "minute").formatToParts(date);
 
     const minute =
       parts.find(

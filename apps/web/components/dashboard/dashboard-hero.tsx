@@ -12,16 +12,18 @@ import type {
 type DashboardHeroProps = {
   profile: {
     first_name?: string | null;
+    timezone?: string | null;
   };
 
   session: SessionStatus;
 };
 
 function getGreeting(
-  date: Date
+  date: Date,
+  timezone?: string | null
 ) {
   const hour =
-    date.getHours();
+    timezone ? Number(new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "numeric", hourCycle: "h23" }).format(date)) : date.getHours();
 
   if (hour < 12) {
     return "Good Morning";
@@ -106,7 +108,7 @@ export function DashboardHero({
     useState("");
 
   const [greeting, setGreeting] =
-    useState("");
+    useState("Welcome Back");
 
   useEffect(() => {
     const updateClock = () => {
@@ -114,7 +116,7 @@ export function DashboardHero({
         new Date();
 
       setGreeting(
-        getGreeting(now)
+        getGreeting(now, profile.timezone)
       );
 
       setTime(
@@ -123,6 +125,7 @@ export function DashboardHero({
           {
             hour: "2-digit",
             minute: "2-digit",
+            timeZone: profile.timezone || undefined,
           }
         )
       );
@@ -140,7 +143,7 @@ export function DashboardHero({
       clearInterval(
         interval
       );
-  }, []);
+  }, [profile.timezone]);
 
   const sessionPresentation =
     getSessionPresentation(
@@ -148,14 +151,14 @@ export function DashboardHero({
     );
 
   return (
-    <section className="rounded-3xl border border-slate-800 bg-gradient-to-r from-slate-900 to-slate-950 p-8">
+    <section className="rounded-3xl border border-slate-800 bg-gradient-to-r from-slate-900 to-slate-950 p-5 sm:p-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-blue-500">
+        <div className="min-w-0">
+          <p className="text-xs uppercase tracking-[0.18em] text-blue-500 sm:text-sm sm:tracking-[0.25em]">
             SmartPulse Intelligence Desk
           </p>
 
-          <h1 className="mt-4 text-5xl font-bold">
+          <h1 className="mt-4 break-words text-3xl font-bold sm:text-4xl xl:text-5xl">
             {greeting},{" "}
             {profile.first_name?.trim() ||
               "Trader"}
@@ -167,7 +170,7 @@ export function DashboardHero({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
+        <div className="shrink-0 rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
           <p className="text-sm text-slate-400">
             Local Time
           </p>

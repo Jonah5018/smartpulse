@@ -59,6 +59,7 @@ export class MacroEngine {
   }
 
   private static calculateConfidence(event: MacroEvent): number {
+    if (event.actual === null || event.forecast === null) return 0;
     const impactWeight = {
       low: 0.4,
       medium: 0.65,
@@ -72,6 +73,12 @@ export class MacroEngine {
     event: MacroEvent,
     bias: MacroBias
   ): MacroInsight["narrative"] {
+    if (event.actual === null || event.forecast === null) {
+      return {
+        headline: `${event.name}: directional data unavailable`,
+        summary: "This calendar notice has no actual-versus-forecast release figures. It does not establish a directional macro signal; check the event details for possible schedule or liquidity effects.",
+      };
+    }
     if (bias === "bullish") {
       return {
         headline: `${event.currency} supported by ${event.name}`,

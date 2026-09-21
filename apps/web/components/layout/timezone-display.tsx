@@ -11,17 +11,13 @@ function subscribeToClock(onChange: () => void) {
   return () => window.clearInterval(interval);
 }
 
-function getLocalTime() {
-  return TimezoneService.format(new Date());
-}
-
 function getServerTime() {
   return null;
 }
 
-export function TimezoneDisplay() {
-  const localTime = useSyncExternalStore(subscribeToClock, getLocalTime, getServerTime);
-  const timezone = localTime ? TimezoneService.detectBrowserTimezone() : null;
+export function TimezoneDisplay({ timezone: preferredTimezone }: { timezone?: string | null }) {
+  const localTime = useSyncExternalStore(subscribeToClock, () => TimezoneService.format(new Date(), preferredTimezone ? { mode: "manual", timezone: preferredTimezone } : undefined), getServerTime);
+  const timezone = localTime ? (preferredTimezone || TimezoneService.detectBrowserTimezone()) : null;
 
   if (!timezone || !localTime) {
     return (

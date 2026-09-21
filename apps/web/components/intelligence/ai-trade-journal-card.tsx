@@ -26,7 +26,7 @@ export function AITradeJournalCard({
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.25em] text-blue-400">
-            AI Trade Journal
+            Setup assessment
           </p>
 
           <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -87,7 +87,7 @@ export function AITradeJournalCard({
       </div>
 
       <div className="mt-6">
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">
               Evidence Checklist
@@ -118,8 +118,8 @@ export function AITradeJournalCard({
                   <span
                     className={
                       item.passed
-                        ? "rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold text-emerald-300"
-                        : "rounded-full bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold text-amber-300"
+                        ? "shrink-0 whitespace-nowrap rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold text-emerald-300"
+                        : "shrink-0 whitespace-nowrap rounded-full bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold text-amber-300"
                     }
                   >
                     {item.passed

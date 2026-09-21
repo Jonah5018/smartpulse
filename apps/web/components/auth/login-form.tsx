@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { signInUser } from "@/app/actions/login";
+import { loginDestination } from "@/lib/auth/login-destination";
 
 export default function LoginForm() {
-  const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -16,25 +15,31 @@ export default function LoginForm() {
     e: React.FormEvent<HTMLFormElement>
   ) {
     e.preventDefault();
+    if (loading) return;
 
     setLoading(true);
     setMessage("");
 
     const formData = new FormData(e.currentTarget);
 
-    const result = await signInUser({
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-    });
+    try {
+      const result = await signInUser({
+        email: String(formData.get("email") ?? "").trim(),
+        password: String(formData.get("password") ?? ""),
+      });
 
-    if (!result.success) {
-      setMessage(result.message);
+      if (!result.success) {
+        setMessage(result.message);
+        return;
+      }
+
+      // Load the protected page using the newly written session cookies.
+      window.location.assign(loginDestination(new URLSearchParams(window.location.search).get("returnTo")));
+    } catch {
+      setMessage("We couldn't complete sign-in. Please check your connection and try again. If this continues, reload this page.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (
@@ -43,13 +48,15 @@ export default function LoginForm() {
       className="space-y-6"
     >
       <div>
-        <label className="mb-2 block text-sm font-medium">
+        <label htmlFor="login-email" className="mb-2 block text-sm font-medium">
           Email
           <span className="text-red-500"> *</span>
         </label>
 
         <input
           type="email"
+          id="login-email"
+          autoComplete="email"
           name="email"
           required
           placeholder="you@example.com"
@@ -58,7 +65,7 @@ export default function LoginForm() {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium">
+        <label htmlFor="login-password" className="mb-2 block text-sm font-medium">
           Password
           <span className="text-red-500"> *</span>
         </label>
@@ -71,12 +78,16 @@ export default function LoginForm() {
                 : "password"
             }
             name="password"
+            id="login-password"
+            autoComplete="current-password"
             required
             className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 pr-12"
           />
 
           <button
             type="button"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
             onClick={() =>
               setShowPassword(
                 !showPassword
@@ -104,7 +115,7 @@ export default function LoginForm() {
       </button>
 
       {message && (
-        <p className="text-center text-sm text-red-400">
+        <p role="alert" className="text-center text-sm text-red-400">
           {message}
         </p>
       )}

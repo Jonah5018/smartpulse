@@ -11,6 +11,15 @@ export class RegimeEngine {
   static analyze(
     macro: MacroContext
   ): RegimeAnalysis {
+    if (macro.confidence === 0) {
+      return {
+        regime: "transition",
+        confidence: 0,
+        title: "Market Regime Unavailable",
+        description: "There is insufficient macro data to classify the market regime.",
+        institutionalMessage: "Wait for verified data before drawing a regime conclusion.",
+      };
+    }
     const regime =
       this.classify(macro);
 

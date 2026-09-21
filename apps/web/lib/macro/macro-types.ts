@@ -12,7 +12,8 @@ export type MacroCurrency =
   | "CHF"
   | "AUD"
   | "NZD"
-  | "CAD";
+  | "CAD"
+  | "UNKNOWN";
 
 export interface MacroEvent {
   id: string;

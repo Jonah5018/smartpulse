@@ -137,7 +137,7 @@ export default async function DashboardPage() {
             LIVE DATA STATUS
         ----------------------------------------- */}
 
-        {!market.dataStatus.available && (
+        {!market.dataStatus.available && market.session.isOpen && (
           <div className="rounded-2xl border border-amber-800/50 bg-amber-950/30 p-5">
 
             <p className="font-semibold text-amber-300">
@@ -164,12 +164,12 @@ export default async function DashboardPage() {
           focusScore={
             market.dataStatus.available
               ? briefing.focusScore
-              : 0
+              : null
           }
 
 
           marketSummary={
-            market.dataStatus.available
+            (market.dataStatus.available || !market.session.isOpen)
               ? briefing
                   .marketSummary
                   .content
@@ -178,7 +178,7 @@ export default async function DashboardPage() {
 
 
           mission={
-            market.dataStatus.available
+            (market.dataStatus.available || !market.session.isOpen)
               ? briefing
                   .mission
                   .content
@@ -187,7 +187,7 @@ export default async function DashboardPage() {
 
 
           opportunity={
-            market.dataStatus.available
+            (market.dataStatus.available || !market.session.isOpen)
               ? briefing
                   .opportunity
                   .content
@@ -196,7 +196,7 @@ export default async function DashboardPage() {
 
 
           risk={
-            market.dataStatus.available
+            (market.dataStatus.available || !market.session.isOpen)
               ? briefing
                   .risk
                   .content

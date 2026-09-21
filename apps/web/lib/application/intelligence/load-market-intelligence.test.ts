@@ -18,6 +18,7 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/components/layout/dashboard-shell", () => ({
   DashboardShell: ({ children }: { children: ReactNode }) => children,
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -121,7 +122,7 @@ describe("LoadMarketIntelligence", () => {
     vi.mocked(LoadMacroIntelligence.execute).mockRejectedValue(new Error("Calendar unavailable"));
     const page = await IntelligencePage({ searchParams: Promise.resolve({ symbol: ["gbp/usd", "EUR/USD"] }) });
     const html = renderToStaticMarkup(page);
-    expect(html).toContain("AI Trade Journal");
+    expect(html).toContain("Setup assessment");
     expect(html).toContain("BUY execution plan is ready");
     expect(html).toContain("Evidence Checklist");
     expect(html).toContain("Analysis warnings");

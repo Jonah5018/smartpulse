@@ -33,6 +33,7 @@ import {
 
 import {
   MarketDataError,
+  type LiveMarketQuote,
 } from "@/lib/providers/market-data";
 
 import {
@@ -80,6 +81,18 @@ export class LoadMarketPulse {
      * It does NOT create an independent provider
      * request pipeline.
      */
+
+    if (!session.isOpen) {
+      return {
+        quotes: [], pulse: MarketService.buildPulse([], session), session,
+        marketScan: [], opportunities: {}, focusScores: [], topFocus: null,
+        decisions: {}, marketSelection: MarketSelectionService.select(watchlist, {}),
+        dataStatus: {
+          available: false, provider: "twelve-data", status: null, retryable: false,
+          message: "Markets are closed. Live analysis resumes with the next trading session.",
+        },
+      };
+    }
 
     let marketScan = [];
 
@@ -166,6 +179,7 @@ export class LoadMarketPulse {
      */
 
     let quotes: MarketQuote[] = [];
+    let priceQuotes: LiveMarketQuote[] = [];
 
     try {
       const liveQuotes =
@@ -173,6 +187,8 @@ export class LoadMarketPulse {
           symbols
         );
 
+
+      priceQuotes = liveQuotes.filter((quote) => Number.isFinite(quote.price) && Number.isFinite(quote.changePercent));
 
       const normalizedQuotes =
         liveQuotes
@@ -308,13 +324,12 @@ export class LoadMarketPulse {
      * MARKET PULSE
      * ------------------------------------------------
      *
-     * The pulse is now calculated only from quotes
-     * that contain a real bid and ask.
+     * Price movement drives the pulse independently of executable spreads.
      */
 
     const pulse =
       MarketService.buildPulse(
-        quotes,
+        priceQuotes,
         session
       );
 
@@ -508,7 +523,7 @@ export class LoadMarketPulse {
 
         dataStatus: {
           available:
-            quotes.length > 0,
+            priceQuotes.length > 0,
 
           provider:
             "twelve-data",
@@ -518,9 +533,9 @@ export class LoadMarketPulse {
           retryable: false,
 
           message:
-            quotes.length > 0
-              ? "Live market data is available."
-              : "Live market data is temporarily incomplete because valid bid/ask quotes are unavailable.",
+            priceQuotes.length > 0
+              ? "Live market prices and analysis are available. Bid/ask spreads may be unavailable."
+              : "Live market prices are temporarily unavailable.",
         },
       };
 

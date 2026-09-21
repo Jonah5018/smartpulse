@@ -9,7 +9,7 @@ import type {
 
 export class MarketService {
   static buildPulse(
-    quotes: MarketQuote[],
+    quotes: Pick<MarketQuote, "changePercent">[],
     session: SessionStatus
   ): MarketPulse {
     /*

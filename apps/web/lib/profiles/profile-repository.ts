@@ -1,3 +1,4 @@
+import { normalizeMarketSymbols } from "@/lib/market/market-universe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
@@ -47,7 +48,9 @@ console.error("Hint:", error.hint);
 
     if (error) throw error;
 
-    return data as TraderProfile | null;
+    if (!data) return null;
+    const profile = data as TraderProfile;
+    return { ...profile, favorite_markets: normalizeMarketSymbols(profile.favorite_markets ?? []) };
   }
 
   static async updateOnboarding(

@@ -30,7 +30,7 @@ export class MacroContextBuilder {
 
     return {
       headline:
-        this.headline(analysis.overallBias),
+        analysis.confidence === 0 ? "Macro direction unavailable" : this.headline(analysis.overallBias),
 
       summary:
         this.summary(analysis),
@@ -70,6 +70,9 @@ export class MacroContextBuilder {
   private static summary(
     analysis: MacroAnalysisResult
   ): string {
+    if (analysis.confidence === 0) {
+      return "Available calendar information is insufficient to establish a directional macro outlook.";
+    }
     const confidence =
       Math.round(
         analysis.confidence * 100
@@ -94,7 +97,7 @@ export class MacroContextBuilder {
       analysis.insights[0];
 
     if (!first) {
-      return "No significant macroeconomic catalyst is currently active.";
+      return "No economic release data is available to assess current macroeconomic catalysts.";
     }
 
     return first.narrative.summary;

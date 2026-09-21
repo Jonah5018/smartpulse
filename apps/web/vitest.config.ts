@@ -5,6 +5,7 @@ import {
 import {
   resolve,
 } from "node:path";
+import { fileURLToPath } from "node:url";
 
 
 export default defineConfig({
@@ -12,7 +13,7 @@ export default defineConfig({
     alias: {
       "@":
         resolve(
-          __dirname,
+          fileURLToPath(new URL(".", import.meta.url)),
           "."
         ),
     },

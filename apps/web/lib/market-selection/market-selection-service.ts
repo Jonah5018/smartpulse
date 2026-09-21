@@ -1,5 +1,6 @@
 import {
   getActiveMarketUniverse,
+  normalizeMarketSymbol,
 } from "@/lib/market/market-universe";
 
 
@@ -115,9 +116,7 @@ export class MarketSelectionService {
           watchlist
             .map(
               (symbol) =>
-                symbol
-                  .trim()
-                  .toUpperCase()
+                normalizeMarketSymbol(symbol)
             )
             .filter(
               (symbol) =>

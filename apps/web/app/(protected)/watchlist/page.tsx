@@ -198,7 +198,7 @@ export default async function WatchlistPage() {
               </p>
             </div>
 
-            <span className="rounded-full bg-slate-900 px-3 py-1 text-xs text-slate-400">
+            <span className="shrink-0 whitespace-nowrap rounded-full bg-slate-900 px-3 py-1 text-xs text-slate-400">
               {watchlist.length}{" "}
               {watchlist.length === 1
                 ? "market"

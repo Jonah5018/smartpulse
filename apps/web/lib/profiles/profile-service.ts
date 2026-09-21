@@ -1,3 +1,5 @@
+import { normalizeMarketSymbols } from "@/lib/market/market-universe";
+
 import type {
   RegistrationIdentity,
   TraderProfileDraft,
@@ -22,6 +24,7 @@ export class ProfileService {
     return {
       ...identity,
       ...validated,
+      favorite_markets: normalizeMarketSymbols(validated.favorite_markets),
 
       id: authUserId,
 

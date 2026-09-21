@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   getActiveMarketSymbols,
+  normalizeMarketSymbol,
+  normalizeMarketSymbols,
 } from "@/lib/market/market-universe";
 
 import {
@@ -36,7 +38,7 @@ export class WatchlistService {
         getActiveMarketSymbols()
       );
 
-    return profile.favorite_markets.filter(
+    return normalizeMarketSymbols(profile.favorite_markets).filter(
       (symbol) =>
         activeSymbols.has(
           symbol
@@ -55,7 +57,7 @@ export class WatchlistService {
     symbol: string
   ): Promise<string[]> {
     const normalizedSymbol =
-      symbol.trim().toUpperCase();
+      normalizeMarketSymbol(symbol);
 
     if (!normalizedSymbol) {
       throw new Error(
@@ -89,7 +91,7 @@ export class WatchlistService {
     }
 
     const current =
-      profile.favorite_markets ?? [];
+      normalizeMarketSymbols(profile.favorite_markets ?? []);
 
     if (
       current.includes(
@@ -126,7 +128,7 @@ export class WatchlistService {
     symbol: string
   ): Promise<string[]> {
     const normalizedSymbol =
-      symbol.trim().toUpperCase();
+      normalizeMarketSymbol(symbol);
 
     const profile =
       await ProfileRepository.findById(
@@ -141,9 +143,7 @@ export class WatchlistService {
     }
 
     const updated =
-      (
-        profile.favorite_markets ?? []
-      ).filter(
+      normalizeMarketSymbols(profile.favorite_markets ?? []).filter(
         (market) =>
           market !==
           normalizedSymbol
@@ -178,7 +178,7 @@ export class WatchlistService {
       );
 
     return watchlist.includes(
-      symbol.trim().toUpperCase()
+      normalizeMarketSymbol(symbol)
     );
   }
 }

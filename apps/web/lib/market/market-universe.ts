@@ -416,3 +416,13 @@ export function getActiveMarketsByTier():
       ),
   };
 }
+/** Accept legacy onboarding identifiers such as GBPUSD as well as GBP/USD. */
+export function normalizeMarketSymbol(symbol: string): string {
+  const normalized = symbol.trim().toUpperCase();
+  const compact = normalized.replaceAll("/", "");
+  return MARKET_UNIVERSE.find((market) => market.symbol.replaceAll("/", "") === compact)?.symbol ?? normalized;
+}
+
+export function normalizeMarketSymbols(symbols: string[]): string[] {
+  return [...new Set(symbols.map(normalizeMarketSymbol).filter(Boolean))];
+}

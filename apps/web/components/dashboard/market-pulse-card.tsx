@@ -54,7 +54,7 @@ export function MarketPulseCard({
               </h2>
 
               <p className="mt-2 text-slate-400">
-                Market Closed
+                {pulse.session.isOpen ? "Data Unavailable" : "Market Closed"}
               </p>
             </>
           )}
