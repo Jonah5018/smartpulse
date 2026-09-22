@@ -18,17 +18,17 @@ export default function RegisterPage() {
             </h2>
 
             <p className="text-sm text-slate-400">
-              Start your free 5-day trial and gain access
-              to institutional-grade market intelligence.
+              Create your account and start exploring
+              SmartPulse market intelligence.
             </p>
           </div>
 
           <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
             <div className="space-y-2 text-sm text-slate-300">
-              <p>✓ 5-Day Free Trial</p>
-              <p>✓ AI Market Narratives</p>
+              <p>✓ Pulse Intelligence</p>
+              <p>✓ Multi-timeframe market analysis</p>
               <p>✓ Trading Journal</p>
-              <p>✓ Trading IQ Analytics</p>
+              <p>✓ Learning-focused explanations</p>
             </div>
           </div>
 

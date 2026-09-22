@@ -33,7 +33,7 @@ export default function LoginPage() {
               href="/register"
               className="mt-2 block text-sm font-medium text-blue-500 hover:text-blue-400"
             >
-              Start your free 5-day trial →
+              Create your SmartPulse account →
             </Link>
           </div>
         </div>

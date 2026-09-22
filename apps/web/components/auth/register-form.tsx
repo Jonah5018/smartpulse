@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
+
 import { signUpUser } from "@/app/actions/auth";
 
 type PasswordStrength =
@@ -14,40 +16,85 @@ type PasswordStrength =
 export default function RegisterForm() {
   const router = useRouter();
 
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [password, setPassword] = useState("");
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] =
+  const [loading, setLoading] =
     useState(false);
 
+  const [message, setMessage] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+  const [
+    showPassword,
+    setShowPassword,
+  ] = useState(false);
+
+  const [
+    showConfirmPassword,
+    setShowConfirmPassword,
+  ] = useState(false);
+
+  const [
+    legalAccepted,
+    setLegalAccepted,
+  ] = useState(false);
+
   function getPasswordStrength(
-    password: string
+    value: string
   ): PasswordStrength {
     let score = 0;
 
-    if (password.length >= 8) score += 1;
-    if (password.length >= 12) score += 1;
-    if (password.length >= 16) score += 1;
+    if (value.length >= 8) {
+      score += 1;
+    }
 
-    if (/[A-Z]/.test(password)) score += 1;
-    if (/[a-z]/.test(password)) score += 1;
-    if (/[0-9]/.test(password)) score += 1;
-    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+    if (value.length >= 12) {
+      score += 1;
+    }
 
-    if (score <= 3) return "Weak";
-    if (score <= 5) return "Medium";
-    if (score <= 6) return "Strong";
+    if (value.length >= 16) {
+      score += 1;
+    }
+
+    if (/[A-Z]/.test(value)) {
+      score += 1;
+    }
+
+    if (/[a-z]/.test(value)) {
+      score += 1;
+    }
+
+    if (/[0-9]/.test(value)) {
+      score += 1;
+    }
+
+    if (/[^A-Za-z0-9]/.test(value)) {
+      score += 1;
+    }
+
+    if (score <= 3) {
+      return "Weak";
+    }
+
+    if (score <= 5) {
+      return "Medium";
+    }
+
+    if (score <= 6) {
+      return "Strong";
+    }
 
     return "Very Strong";
   }
 
-  const strength = getPasswordStrength(password);
+  const strength =
+    getPasswordStrength(password);
 
   const canSubmit =
-    strength === "Strong" ||
-    strength === "Very Strong";
+    (strength === "Strong" ||
+      strength === "Very Strong") &&
+    legalAccepted;
 
   function strengthWidth() {
     switch (strength) {
@@ -82,25 +129,36 @@ export default function RegisterForm() {
   }
 
   async function handleSubmit(
-    e: React.FormEvent<HTMLFormElement>
+    event: React.FormEvent<HTMLFormElement>
   ) {
-    e.preventDefault();
+    event.preventDefault();
 
     setLoading(true);
     setMessage("");
 
     try {
-      const form = e.currentTarget;
-      const formData = new FormData(form);
+      const form =
+        event.currentTarget;
 
-      const password =
+      const formData =
+        new FormData(form);
+
+      const submittedPassword =
         formData.get("password") as string;
 
       const confirmPassword =
-        formData.get("confirmPassword") as string;
+        formData.get(
+          "confirmPassword"
+        ) as string;
 
-      if (password !== confirmPassword) {
-        setMessage("Passwords do not match.");
+      if (
+        submittedPassword !==
+        confirmPassword
+      ) {
+        setMessage(
+          "Passwords do not match."
+        );
+
         return;
       }
 
@@ -111,21 +169,53 @@ export default function RegisterForm() {
         setMessage(
           "Password must be Strong or Very Strong."
         );
+
+        return;
+      }
+
+      if (!legalAccepted) {
+        setMessage(
+          "You must confirm the legal terms before creating an account."
+        );
+
         return;
       }
 
       const timezone =
-        Intl.DateTimeFormat().resolvedOptions().timeZone;
+        Intl.DateTimeFormat()
+          .resolvedOptions()
+          .timeZone;
 
-      const result = await signUpUser({
-        firstName: formData.get("firstName") as string,
-        otherNames:
-          (formData.get("otherNames") as string) || "",
-        lastName: formData.get("lastName") as string,
-        email: formData.get("email") as string,
-        password,
-        timezone,
-      });
+      const result =
+        await signUpUser({
+          firstName:
+            formData.get(
+              "firstName"
+            ) as string,
+
+          otherNames:
+            (formData.get(
+              "otherNames"
+            ) as string) || "",
+
+          lastName:
+            formData.get(
+              "lastName"
+            ) as string,
+
+          email:
+            formData.get(
+              "email"
+            ) as string,
+
+          password:
+            submittedPassword,
+
+          timezone,
+
+          acceptedLegal:
+            legalAccepted,
+        });
 
       if (!result.success) {
         setMessage(result.message);
@@ -133,11 +223,23 @@ export default function RegisterForm() {
       }
 
       form.reset();
-      setPassword("");
 
-      router.push("/verify-email");
+      setPassword("");
+      setLegalAccepted(false);
+
+      router.push(
+        "/verify-email"
+      );
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Registration request failed.",
+        {
+          error:
+            error instanceof Error
+              ? error.name
+              : "UnknownError",
+        }
+      );
 
       setMessage(
         "Something went wrong. Please try again."
@@ -153,19 +255,25 @@ export default function RegisterForm() {
       className="space-y-4"
     >
       <p className="text-xs text-slate-400">
-        <span className="text-red-500">*</span>{" "}
+        <span className="text-red-500">
+          *
+        </span>{" "}
         Fields marked are required
       </p>
 
       <div>
         <label className="mb-2 block text-sm font-medium">
           First Name{" "}
-          <span className="text-red-500">*</span>
+          <span className="text-red-500">
+            *
+          </span>
         </label>
 
         <input
           name="firstName"
           required
+          maxLength={80}
+          autoComplete="given-name"
           className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3"
         />
       </div>
@@ -177,6 +285,8 @@ export default function RegisterForm() {
 
         <input
           name="otherNames"
+          maxLength={160}
+          autoComplete="additional-name"
           className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3"
         />
       </div>
@@ -184,12 +294,16 @@ export default function RegisterForm() {
       <div>
         <label className="mb-2 block text-sm font-medium">
           Last Name{" "}
-          <span className="text-red-500">*</span>
+          <span className="text-red-500">
+            *
+          </span>
         </label>
 
         <input
           name="lastName"
           required
+          maxLength={80}
+          autoComplete="family-name"
           className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3"
         />
       </div>
@@ -197,13 +311,16 @@ export default function RegisterForm() {
       <div>
         <label className="mb-2 block text-sm font-medium">
           Email{" "}
-          <span className="text-red-500">*</span>
+          <span className="text-red-500">
+            *
+          </span>
         </label>
 
         <input
           type="email"
           name="email"
           required
+          autoComplete="email"
           className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3"
         />
       </div>
@@ -211,33 +328,55 @@ export default function RegisterForm() {
       <div>
         <label className="mb-2 block text-sm font-medium">
           Password{" "}
-          <span className="text-red-500">*</span>
+          <span className="text-red-500">
+            *
+          </span>
         </label>
 
         <div className="relative">
           <input
-            type={showPassword ? "text" : "password"}
+            type={
+              showPassword
+                ? "text"
+                : "password"
+            }
             name="password"
             required
             minLength={8}
+            autoComplete="new-password"
             value={password}
-            onChange={(e) =>
-              setPassword(e.target.value)
+            onChange={(event) =>
+              setPassword(
+                event.target.value
+              )
             }
             className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 pr-12"
           />
 
           <button
             type="button"
+            aria-label={
+              showPassword
+                ? "Hide password"
+                : "Show password"
+            }
             onClick={() =>
-              setShowPassword(!showPassword)
+              setShowPassword(
+                !showPassword
+              )
             }
             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
           >
             {showPassword ? (
-              <EyeOff size={18} />
+              <EyeOff
+                size={18}
+                aria-hidden="true"
+              />
             ) : (
-              <Eye size={18} />
+              <Eye
+                size={18}
+                aria-hidden="true"
+              />
             )}
           </button>
         </div>
@@ -247,7 +386,8 @@ export default function RegisterForm() {
             <div
               className={`h-full transition-all ${strengthColor()}`}
               style={{
-                width: strengthWidth(),
+                width:
+                  strengthWidth(),
               }}
             />
           </div>
@@ -261,7 +401,8 @@ export default function RegisterForm() {
           </p>
 
           <p className="mt-1 text-xs text-slate-500">
-            Use uppercase, lowercase, numbers and
+            Use uppercase,
+            lowercase, numbers and
             special characters.
           </p>
         </div>
@@ -270,7 +411,9 @@ export default function RegisterForm() {
       <div>
         <label className="mb-2 block text-sm font-medium">
           Confirm Password{" "}
-          <span className="text-red-500">*</span>
+          <span className="text-red-500">
+            *
+          </span>
         </label>
 
         <div className="relative">
@@ -283,11 +426,17 @@ export default function RegisterForm() {
             name="confirmPassword"
             required
             minLength={8}
+            autoComplete="new-password"
             className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 pr-12"
           />
 
           <button
             type="button"
+            aria-label={
+              showConfirmPassword
+                ? "Hide confirmed password"
+                : "Show confirmed password"
+            }
             onClick={() =>
               setShowConfirmPassword(
                 !showConfirmPassword
@@ -296,26 +445,85 @@ export default function RegisterForm() {
             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
           >
             {showConfirmPassword ? (
-              <EyeOff size={18} />
+              <EyeOff
+                size={18}
+                aria-hidden="true"
+              />
             ) : (
-              <Eye size={18} />
+              <Eye
+                size={18}
+                aria-hidden="true"
+              />
             )}
           </button>
         </div>
       </div>
 
+      <label className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-sm leading-6 text-slate-300">
+        <input
+          type="checkbox"
+          checked={legalAccepted}
+          onChange={(event) =>
+            setLegalAccepted(
+              event.target.checked
+            )
+          }
+          required
+          className="mt-1 size-4 shrink-0"
+        />
+
+        <span>
+          I confirm that I am at
+          least 18 years old, agree
+          to the{" "}
+          <Link
+            href="/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300"
+          >
+            Terms of Service
+          </Link>
+          , acknowledge the{" "}
+          <Link
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300"
+          >
+            Privacy Policy
+          </Link>
+          , and have read the{" "}
+          <Link
+            href="/risk-disclosure"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300"
+          >
+            Trading Risk Disclosure
+          </Link>
+          .
+        </span>
+      </label>
+
       <button
         type="submit"
-        disabled={loading || !canSubmit}
+        disabled={
+          loading ||
+          !canSubmit
+        }
         className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading
           ? "Creating Account..."
-          : "Start Free Trial"}
+          : "Create Account"}
       </button>
 
       {message && (
-        <p className="text-center text-sm text-slate-300">
+        <p
+          role="status"
+          className="text-center text-sm text-slate-300"
+        >
           {message}
         </p>
       )}
