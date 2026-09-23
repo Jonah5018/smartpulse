@@ -1,13 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
-import Link from "next/link";
+import {
+  sendPasswordResetEmail,
+} from "@/app/actions/password";
 
-import { sendPasswordResetEmail } from "@/app/actions/password";
+import {
+  TurnstileWidget,
+} from "@/components/auth/turnstile-widget";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Button,
+} from "@/components/ui/button";
+
+import {
+  Input,
+} from "@/components/ui/input";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] =
@@ -19,20 +29,79 @@ export function ForgotPasswordForm() {
   const [message, setMessage] =
     useState("");
 
-  async function handleSubmit(
-    e: React.FormEvent
-  ) {
-    e.preventDefault();
+  const [
+    captchaToken,
+    setCaptchaToken,
+  ] = useState<string | null>(null);
 
-    setLoading(true);
+  const [
+    captchaResetSignal,
+    setCaptchaResetSignal,
+  ] = useState(0);
+
+  function resetCaptcha() {
+    setCaptchaToken(null);
+
+    setCaptchaResetSignal(
+      (value) => value + 1
+    );
+  }
+
+  async function handleSubmit(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    if (loading) {
+      return;
+    }
+
     setMessage("");
 
-    const result =
-      await sendPasswordResetEmail(email);
+    if (!captchaToken) {
+      setMessage(
+        "Complete the security verification before requesting a reset link."
+      );
 
-    setMessage(result.message);
+      return;
+    }
 
-    setLoading(false);
+    setLoading(true);
+
+    try {
+      const result =
+        await sendPasswordResetEmail(
+          email,
+          captchaToken
+        );
+
+      setMessage(result.message);
+
+      /*
+       * Turnstile tokens are single use.
+       * Always request a fresh challenge
+       * after the password reset request.
+       */
+      resetCaptcha();
+    } catch (error) {
+      console.error(
+        "Password reset request failed.",
+        {
+          error:
+            error instanceof Error
+              ? error.name
+              : "UnknownError",
+        }
+      );
+
+      resetCaptcha();
+
+      setMessage(
+        "We couldn't process the password reset request. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -42,25 +111,45 @@ export function ForgotPasswordForm() {
         className="space-y-5"
       >
         <div>
-          <label className="mb-2 block text-sm font-medium">
+          <label
+            htmlFor="forgot-password-email"
+            className="mb-2 block text-sm font-medium"
+          >
             Email
           </label>
 
           <Input
+            id="forgot-password-email"
             type="email"
             required
+            maxLength={254}
+            autoComplete="email"
             value={email}
-            onChange={(e) =>
-              setEmail(e.target.value)
+            onChange={(event) =>
+              setEmail(
+                event.target.value
+              )
             }
             placeholder="you@example.com"
           />
         </div>
 
+        <TurnstileWidget
+          onTokenChange={
+            setCaptchaToken
+          }
+          resetSignal={
+            captchaResetSignal
+          }
+        />
+
         <Button
           type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700"
+          disabled={
+            loading ||
+            !captchaToken
+          }
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading
             ? "Sending..."
@@ -69,7 +158,11 @@ export function ForgotPasswordForm() {
       </form>
 
       {message && (
-        <p className="text-center text-sm text-slate-300">
+        <p
+          role="status"
+          aria-live="polite"
+          className="text-center text-sm text-slate-300"
+        >
           {message}
         </p>
       )}

@@ -11,6 +11,7 @@ interface SignUpInput {
   password: string;
   timezone: string;
   acceptedLegal: boolean;
+  captchaToken: string;
 }
 
 export async function signUpUser({
@@ -21,6 +22,7 @@ export async function signUpUser({
   password,
   timezone,
   acceptedLegal,
+  captchaToken,
 }: SignUpInput) {
   /*
    * Legal acknowledgement must also be checked
@@ -103,6 +105,14 @@ export async function signUpUser({
     };
   }
 
+  if (!captchaToken.trim()) {
+    return {
+      success: false,
+      message:
+        "Complete the security verification before creating your account.",
+   };
+ }
+
   try {
     const supabase = await createClient();
 
@@ -112,6 +122,7 @@ export async function signUpUser({
         password,
 
         options: {
+          captchaToken,
           emailRedirectTo:
             `${getSiteUrl()}/auth/callback`,
 

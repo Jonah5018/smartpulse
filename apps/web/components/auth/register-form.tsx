@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 import { signUpUser } from "@/app/actions/auth";
+import {
+  TurnstileWidget,
+} from "@/components/auth/turnstile-widget";
 
 type PasswordStrength =
   | "Weak"
@@ -39,6 +42,16 @@ export default function RegisterForm() {
     legalAccepted,
     setLegalAccepted,
   ] = useState(false);
+
+  const [
+    captchaToken,
+    setCaptchaToken,
+  ] = useState<string | null>(null);
+
+  const [
+    captchaResetSignal,
+    setCaptchaResetSignal,
+  ] = useState(0);
 
   function getPasswordStrength(
     value: string
@@ -88,13 +101,28 @@ export default function RegisterForm() {
     return "Very Strong";
   }
 
+  function passwordMeetsPolicy(
+    value: string
+  ): boolean {
+    return (
+      value.length >= 8 &&
+      /[A-Z]/.test(value) &&
+      /[a-z]/.test(value) &&
+      /[0-9]/.test(value) &&
+      /[^A-Za-z0-9]/.test(value)
+    );
+  }
+
   const strength =
     getPasswordStrength(password);
 
+  const validPassword =
+    passwordMeetsPolicy(password);
+
   const canSubmit =
-    (strength === "Strong" ||
-      strength === "Very Strong") &&
-    legalAccepted;
+    validPassword &&
+    legalAccepted &&
+    Boolean(captchaToken);
 
   function strengthWidth() {
     switch (strength) {
@@ -128,10 +156,22 @@ export default function RegisterForm() {
     }
   }
 
+  function resetCaptcha() {
+    setCaptchaToken(null);
+
+    setCaptchaResetSignal(
+      (value) => value + 1
+    );
+  }
+
   async function handleSubmit(
     event: React.FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
+
+    if (loading) {
+      return;
+    }
 
     setLoading(true);
     setMessage("");
@@ -144,12 +184,16 @@ export default function RegisterForm() {
         new FormData(form);
 
       const submittedPassword =
-        formData.get("password") as string;
+        String(
+          formData.get("password") ?? ""
+        );
 
       const confirmPassword =
-        formData.get(
-          "confirmPassword"
-        ) as string;
+        String(
+          formData.get(
+            "confirmPassword"
+          ) ?? ""
+        );
 
       if (
         submittedPassword !==
@@ -163,11 +207,12 @@ export default function RegisterForm() {
       }
 
       if (
-        strength !== "Strong" &&
-        strength !== "Very Strong"
+        !passwordMeetsPolicy(
+          submittedPassword
+        )
       ) {
         setMessage(
-          "Password must be Strong or Very Strong."
+          "Password must contain at least 8 characters, including uppercase and lowercase letters, a number, and a symbol."
         );
 
         return;
@@ -181,6 +226,14 @@ export default function RegisterForm() {
         return;
       }
 
+      if (!captchaToken) {
+        setMessage(
+          "Complete the security verification before creating your account."
+        );
+
+        return;
+      }
+
       const timezone =
         Intl.DateTimeFormat()
           .resolvedOptions()
@@ -189,24 +242,32 @@ export default function RegisterForm() {
       const result =
         await signUpUser({
           firstName:
-            formData.get(
-              "firstName"
-            ) as string,
+            String(
+              formData.get(
+                "firstName"
+              ) ?? ""
+            ),
 
           otherNames:
-            (formData.get(
-              "otherNames"
-            ) as string) || "",
+            String(
+              formData.get(
+                "otherNames"
+              ) ?? ""
+            ),
 
           lastName:
-            formData.get(
-              "lastName"
-            ) as string,
+            String(
+              formData.get(
+                "lastName"
+              ) ?? ""
+            ),
 
           email:
-            formData.get(
-              "email"
-            ) as string,
+            String(
+              formData.get(
+                "email"
+              ) ?? ""
+            ),
 
           password:
             submittedPassword,
@@ -215,10 +276,15 @@ export default function RegisterForm() {
 
           acceptedLegal:
             legalAccepted,
+
+          captchaToken,
         });
 
       if (!result.success) {
         setMessage(result.message);
+
+        resetCaptcha();
+
         return;
       }
 
@@ -226,6 +292,7 @@ export default function RegisterForm() {
 
       setPassword("");
       setLegalAccepted(false);
+      setCaptchaToken(null);
 
       router.push(
         "/verify-email"
@@ -240,6 +307,8 @@ export default function RegisterForm() {
               : "UnknownError",
         }
       );
+
+      resetCaptcha();
 
       setMessage(
         "Something went wrong. Please try again."
@@ -262,7 +331,10 @@ export default function RegisterForm() {
       </p>
 
       <div>
-        <label className="mb-2 block text-sm font-medium">
+        <label
+          htmlFor="firstName"
+          className="mb-2 block text-sm font-medium"
+        >
           First Name{" "}
           <span className="text-red-500">
             *
@@ -270,6 +342,7 @@ export default function RegisterForm() {
         </label>
 
         <input
+          id="firstName"
           name="firstName"
           required
           maxLength={80}
@@ -279,11 +352,15 @@ export default function RegisterForm() {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium">
+        <label
+          htmlFor="otherNames"
+          className="mb-2 block text-sm font-medium"
+        >
           Other Name(s)
         </label>
 
         <input
+          id="otherNames"
           name="otherNames"
           maxLength={160}
           autoComplete="additional-name"
@@ -292,7 +369,10 @@ export default function RegisterForm() {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium">
+        <label
+          htmlFor="lastName"
+          className="mb-2 block text-sm font-medium"
+        >
           Last Name{" "}
           <span className="text-red-500">
             *
@@ -300,6 +380,7 @@ export default function RegisterForm() {
         </label>
 
         <input
+          id="lastName"
           name="lastName"
           required
           maxLength={80}
@@ -309,7 +390,10 @@ export default function RegisterForm() {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium">
+        <label
+          htmlFor="registerEmail"
+          className="mb-2 block text-sm font-medium"
+        >
           Email{" "}
           <span className="text-red-500">
             *
@@ -317,16 +401,21 @@ export default function RegisterForm() {
         </label>
 
         <input
+          id="registerEmail"
           type="email"
           name="email"
           required
+          maxLength={254}
           autoComplete="email"
           className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3"
         />
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium">
+        <label
+          htmlFor="registerPassword"
+          className="mb-2 block text-sm font-medium"
+        >
           Password{" "}
           <span className="text-red-500">
             *
@@ -335,6 +424,7 @@ export default function RegisterForm() {
 
         <div className="relative">
           <input
+            id="registerPassword"
             type={
               showPassword
                 ? "text"
@@ -343,6 +433,7 @@ export default function RegisterForm() {
             name="password"
             required
             minLength={8}
+            maxLength={256}
             autoComplete="new-password"
             value={password}
             onChange={(event) =>
@@ -360,9 +451,12 @@ export default function RegisterForm() {
                 ? "Hide password"
                 : "Show password"
             }
+            aria-pressed={
+              showPassword
+            }
             onClick={() =>
               setShowPassword(
-                !showPassword
+                (value) => !value
               )
             }
             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -401,15 +495,19 @@ export default function RegisterForm() {
           </p>
 
           <p className="mt-1 text-xs text-slate-500">
-            Use uppercase,
-            lowercase, numbers and
-            special characters.
+            Use at least 8 characters
+            with uppercase and lowercase
+            letters, a number, and a
+            symbol.
           </p>
         </div>
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium">
+        <label
+          htmlFor="confirmPassword"
+          className="mb-2 block text-sm font-medium"
+        >
           Confirm Password{" "}
           <span className="text-red-500">
             *
@@ -418,6 +516,7 @@ export default function RegisterForm() {
 
         <div className="relative">
           <input
+            id="confirmPassword"
             type={
               showConfirmPassword
                 ? "text"
@@ -426,6 +525,7 @@ export default function RegisterForm() {
             name="confirmPassword"
             required
             minLength={8}
+            maxLength={256}
             autoComplete="new-password"
             className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 pr-12"
           />
@@ -437,9 +537,12 @@ export default function RegisterForm() {
                 ? "Hide confirmed password"
                 : "Show confirmed password"
             }
+            aria-pressed={
+              showConfirmPassword
+            }
             onClick={() =>
               setShowConfirmPassword(
-                !showConfirmPassword
+                (value) => !value
               )
             }
             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -457,6 +560,17 @@ export default function RegisterForm() {
             )}
           </button>
         </div>
+      </div>
+
+      <div>
+        <TurnstileWidget
+          onTokenChange={
+            setCaptchaToken
+          }
+          resetSignal={
+            captchaResetSignal
+          }
+        />
       </div>
 
       <label className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-sm leading-6 text-slate-300">

@@ -1,11 +1,22 @@
-import { redirect } from "next/navigation";
+import {
+  redirect,
+} from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
+import {
+  LegalAcceptanceRepository,
+} from "@/lib/legal/legal-acceptance-repository";
 
-import { ProfileRepository } from "@/lib/profiles/profile-repository";
+import {
+  ProfileRepository,
+} from "@/lib/profiles/profile-repository";
+
+import {
+  createClient,
+} from "@/lib/supabase/server";
 
 export async function redirectIfAuthenticated() {
-  const client = await createClient();
+  const client =
+    await createClient();
 
   const {
     data: { user },
@@ -13,6 +24,17 @@ export async function redirectIfAuthenticated() {
 
   if (!user) {
     return;
+  }
+
+  const hasCurrentLegalAcceptance =
+    await LegalAcceptanceRepository
+      .hasCurrentAcceptance(
+        client,
+        user.id
+      );
+
+  if (!hasCurrentLegalAcceptance) {
+    redirect("/legal-consent");
   }
 
   const profile =
