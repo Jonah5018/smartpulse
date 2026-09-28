@@ -1,25 +1,42 @@
 "use server";
 
-import { ProvisionTraderAccount } from "@/lib/application";
-import type { TraderProfileDraft } from "@/lib/profiles";
+import {
+  ProvisionTraderAccount,
+} from "@/lib/application";
+
+import type {
+  TraderProfileDraft,
+} from "@/lib/profiles";
 
 export async function completeOnboarding(
   draft: TraderProfileDraft
 ) {
   try {
-    return await ProvisionTraderAccount.execute(draft);
+    const profile =
+      await ProvisionTraderAccount.execute(
+        draft
+      );
+
+    return {
+      success: true as const,
+      profile,
+    };
   } catch (error) {
-    console.error("========== ONBOARDING ERROR ==========");
+    console.error(
+      "Onboarding completion failed.",
+      {
+        error:
+          error instanceof Error
+            ? error.name
+            : "UnknownError",
+      }
+    );
 
-    if (error instanceof Error) {
-      console.error(error.message);
-      console.error(error.stack);
-    } else {
-      console.dir(error, { depth: null });
-    }
+    return {
+      success: false as const,
 
-    console.error("======================================");
-
-    throw error;
+      message:
+        "We couldn't finish setting up your account. Please try again.",
+    };
   }
 }

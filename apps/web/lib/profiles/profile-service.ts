@@ -1,4 +1,6 @@
-import { normalizeMarketSymbols } from "@/lib/market/market-universe";
+import {
+  normalizeMarketSymbols,
+} from "@/lib/market/market-universe";
 
 import type {
   RegistrationIdentity,
@@ -24,15 +26,26 @@ export class ProfileService {
     return {
       ...identity,
       ...validated,
-      favorite_markets: normalizeMarketSymbols(validated.favorite_markets),
+
+      favorite_markets:
+        normalizeMarketSymbols(
+          validated.favorite_markets
+        ),
 
       id: authUserId,
 
       auth_user_id:
         authUserId,
 
+      /*
+       * Building a profile does not mean onboarding
+       * has successfully completed.
+       *
+       * The application layer changes this to true
+       * only after entitlement provisioning succeeds.
+       */
       onboarding_completed:
-        true,
+        false,
     };
   }
 }

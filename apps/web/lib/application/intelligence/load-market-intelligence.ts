@@ -41,6 +41,7 @@ export class LoadMarketIntelligence {
     symbol: string,
     watchlist: string[] = []
   ): Promise<MarketIntelligenceResult> {
+
     const normalizedSymbol = symbol.trim().toUpperCase();
     const session = MarketSessionService.current();
     const availability = MarketAvailabilityService.current(normalizedSymbol);
