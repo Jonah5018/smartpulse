@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import {
-  getActiveMarketsByTier,
+  getActiveMarketGroups,
 } from "@/lib/market/market-universe";
 
 const groups =
-  getActiveMarketsByTier();
+  getActiveMarketGroups();
 
 interface Props {
   selected: string;
@@ -27,7 +27,7 @@ export function MarketBrowser({
         </h2>
 
         <p className="mt-2 text-sm text-slate-400">
-          SmartPulse groups instruments by institutional priority.
+          SmartPulse groups instruments by asset class and category.
         </p>
       </div>
 

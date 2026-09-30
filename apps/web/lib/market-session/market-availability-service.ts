@@ -3,7 +3,7 @@ import type {
 } from "@/lib/market";
 
 import {
-  MARKET_UNIVERSE,
+  findInstrument,
 } from "@/lib/market/market-universe";
 
 import {
@@ -39,36 +39,16 @@ export class MarketAvailabilityService {
     symbol: string,
     date = new Date()
   ): MarketAvailability {
-    const normalizedSymbol =
-      symbol
-        .trim()
-        .toUpperCase();
+    const instrument = findInstrument(symbol);
+    const normalizedSymbol = instrument?.symbol ?? symbol.trim().toUpperCase();
 
-    const instrument =
-      MARKET_UNIVERSE.find(
-        (market) =>
-          market.symbol.toUpperCase() ===
-          normalizedSymbol
-      );
-
-    /*
-     * Unknown instruments preserve the previous
-     * behavior so existing callers are not
-     * unexpectedly blocked.
-     */
-    if (!instrument) {
+    if (!instrument?.enabled) {
       return {
-        symbol:
-          normalizedSymbol,
-
-        type: null,
-
+        symbol: normalizedSymbol,
+        type: instrument?.type ?? null,
         status: "unknown",
-
-        isOpen: true,
-
-        reason:
-          "Market calendar is not configured for this instrument. Existing analysis behavior is preserved.",
+        isOpen: false,
+        reason: instrument?.unavailableReason ?? "Unsupported instrument.",
       };
     }
 

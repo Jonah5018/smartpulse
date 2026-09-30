@@ -1,3 +1,4 @@
+import { MarketAvailabilityService } from "@/lib/market-session/market-availability-service";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 
 import {
@@ -66,8 +67,8 @@ export default async function MarketsPage() {
               }
             >
               {market.session.isOpen
-                ? "Market Open"
-                : "Market Closed"}
+                ? "Forex Open"
+                : "Forex Closed"}
             </div>
           </div>
         </section>
@@ -155,7 +156,7 @@ export default async function MarketsPage() {
 
                 <p className="mt-1 text-sm text-slate-500">
                   Ranked according to the configured
-                  SmartPulse market universe.
+                  SmartPulse market universe. {market.dataStatus.message}
                 </p>
               </div>
 
@@ -170,7 +171,7 @@ export default async function MarketsPage() {
           instrument
     }  
         marketOpen={
-          market.session.isOpen
+          MarketAvailabilityService.current(instrument.symbol).isOpen
    }
         isWatched={
          watchlist.includes(

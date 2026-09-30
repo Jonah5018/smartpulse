@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { PriceActionCard } from "@/components/intelligence/price-action-card";
+
 import Link from "next/link";
 
 import {
@@ -89,6 +91,7 @@ import {
 } from "@/lib/providers/market-data";
 
 import {
+  getActiveMarketGroups,
   getActiveMarketSymbols,
   normalizeMarketSymbol,
 } from "@/lib/market/market-universe";
@@ -153,13 +156,8 @@ export default async function IntelligencePage({
       ) ?? ""
     );
 
-  const symbol =
-    allowedSymbols.includes(
-      requestedSymbol
-    )
-      ? requestedSymbol
-      : allowedSymbols[0] ??
-        "GBP/USD";
+  // Explicitly requested invalid markets must not silently become GBP/USD.
+  const symbol = requestedSymbol || allowedSymbols[0] || "GBP/USD";
 
   let intelligence:
     Awaited<
@@ -252,34 +250,24 @@ export default async function IntelligencePage({
 
         {!accessError && (
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <nav
-              aria-label="Select market"
-              className="flex flex-wrap gap-2"
-            >
-              {allowedSymbols.map(
-                (market) => (
-                  <Link
-                    key={market}
-                    aria-current={
-                      market ===
-                      symbol
-                        ? "page"
-                        : undefined
-                    }
-                    href={`/intelligence?symbol=${encodeURIComponent(
-                      market
-                    )}`}
-                    className={
-                      market ===
-                      symbol
-                        ? "sp-button-primary"
-                        : "sp-button-secondary"
-                    }
-                  >
-                    {market}
-                  </Link>
-                )
-              )}
+            <nav aria-label="Select market" className="w-full space-y-3">
+              {Object.entries(getActiveMarketGroups()).map(([group, markets]) => (
+                <div key={group} className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{group}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {markets.map(market => (
+                      <Link
+                        key={market.id}
+                        aria-current={market.symbol === symbol ? "page" : undefined}
+                        href={"/intelligence?symbol=" + encodeURIComponent(market.symbol)}
+                        className={market.symbol === symbol ? "sp-button-primary" : "sp-button-secondary"}
+                      >
+                        {market.symbol}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </nav>
 
             <Link
@@ -619,6 +607,13 @@ export default async function IntelligencePage({
                     title="01 · Structure & price delivery"
                     description="Top-down analysis, market sequence and liquidity"
                   >
+                    {setup.priceAction && (
+                      <PriceActionCard
+                        analysis={setup.priceAction}
+                        beginner={profile.learning_mode === "learning"}
+                      />
+                    )}
+
                     <TopDownAnalysisCard
                       setup={setup}
                     />

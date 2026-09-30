@@ -33,8 +33,18 @@ export class ConfluenceEngine {
     orderBlock: OrderBlock | null,
     fvg: FairValueGap | null,
     premiumDiscount: PremiumDiscountArray,
-    displacement: Displacement
+    displacement: Displacement,
+    evidence?: {
+      direction: "buy" | "sell" | "neutral";
+      conflict: boolean;
+      zoneUsable: boolean;
+      breakoutConfirmed: boolean;
+    }
   ): ConfluenceResult {
+    const expectedDirection =
+      evidence?.direction === "buy" ? "bullish"
+        : evidence?.direction === "sell" ? "bearish" : null;
+
     let score = 0;
     let confirmations = 0;
 
@@ -71,7 +81,8 @@ export class ConfluenceEngine {
     /* ---------------------------------- */
 
     if (
-      liquidity.latestSweep?.detected
+      liquidity.latestSweep?.detected && (!evidence ||
+        liquidity.latestSweep.direction === expectedDirection)
     ) {
       breakdown.liquidity = 20;
       score += 20;
@@ -82,7 +93,7 @@ export class ConfluenceEngine {
     /* Order Block (15)                   */
     /* ---------------------------------- */
 
-    if (orderBlock) {
+    if (orderBlock?.detected && (!evidence || evidence.zoneUsable)) {
       breakdown.orderBlock = 15;
       score += 15;
       confirmations++;
@@ -92,7 +103,8 @@ export class ConfluenceEngine {
     /* Fair Value Gap (10)                */
     /* ---------------------------------- */
 
-    if (fvg) {
+    if (fvg && !fvg.isMitigated && fvg.mitigationPercent < 100 && fvg.strength >= 60 &&
+      (!evidence || fvg.direction === expectedDirection)) {
       breakdown.fairValueGap = 10;
       score += 10;
       confirmations++;
@@ -104,17 +116,17 @@ export class ConfluenceEngine {
 
     if (
       premiumDiscount.zone ===
-      "discount"
+      "discount" && (!evidence || evidence.direction === "buy")
     ) {
       breakdown.premiumDiscount = 10;
       score += 10;
       confirmations++;
     } else if (
       premiumDiscount.zone ===
-      "premium"
+      "premium" && (!evidence || evidence.direction === "sell")
     ) {
-      breakdown.premiumDiscount = 8;
-      score += 8;
+      breakdown.premiumDiscount = 10;
+      score += 10;
       confirmations++;
     }
 
@@ -123,7 +135,8 @@ export class ConfluenceEngine {
     /* ---------------------------------- */
 
     if (
-      displacement.detected
+      displacement.detected && (!evidence ||
+        displacement.direction === expectedDirection)
     ) {
       const weighted =
         Math.round(
@@ -159,7 +172,7 @@ export class ConfluenceEngine {
       grade,
       confirmations,
       breakdown,
-      valid: score >= 65,
+      valid: score >= 65 && (!evidence || (!evidence.conflict && evidence.breakoutConfirmed)),
     };
   }
 }

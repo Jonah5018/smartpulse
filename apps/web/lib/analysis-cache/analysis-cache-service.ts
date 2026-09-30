@@ -1,3 +1,4 @@
+import { canonicalInstrumentId } from "@/lib/market/market-universe";
 import { AnalysisCache as CoreCache } from "./analysis-cache";
 import type { AnalysisSnapshot } from "./analysis-cache-types";
 
@@ -15,7 +16,7 @@ export class AnalysisCacheService {
   private static key(
     symbol: string
   ) {
-    return `snapshot:${symbol.trim().toUpperCase()}`;
+    return `snapshot:${canonicalInstrumentId(symbol)}`;
   }
 
   /**

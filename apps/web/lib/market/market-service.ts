@@ -3,13 +3,15 @@ import type {
   MarketQuote,
 } from "./market-types";
 
+import { MarketAvailabilityService } from "@/lib/market-session/market-availability-service";
+
 import type {
   SessionStatus,
 } from "@/lib/market-session";
 
 export class MarketService {
   static buildPulse(
-    quotes: Pick<MarketQuote, "changePercent">[],
+    quotes: (Pick<MarketQuote, "changePercent"> & { symbol?: string })[],
     session: SessionStatus
   ): MarketPulse {
     /*
@@ -23,7 +25,7 @@ export class MarketService {
      * `null` means there is no current score.
      * It is intentionally different from a score of 0.
      */
-    if (!session.isOpen) {
+    if (!session.isOpen && !quotes.some(quote => quote.symbol && MarketAvailabilityService.current(quote.symbol).isOpen)) {
       return {
         score: null,
 

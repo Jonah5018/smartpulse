@@ -1,402 +1,133 @@
-import {
-  MarketDataService,
-} from "@/lib/providers/market-data";
+import { MarketDataService, MarketDataError } from "@/lib/providers/market-data";
+import type { LiveMarketQuote } from "@/lib/providers/market-data";
+import type { CandleInterval, MarketCandle } from "@/lib/market";
+import { findInstrument } from "@/lib/market/market-universe";
+import { MarketCache } from "@/lib/cache";
+import { RequestBudget } from "@/lib/providers/market-data/request-budget";
 
-import {
-  MarketDataError,
-} from "@/lib/providers/market-data";
-
-import type {
-  LiveMarketQuote,
-} from "@/lib/providers/market-data";
-
-import type {
-  CandleInterval,
-  MarketCandle,
-} from "@/lib/market";
-
-import {
-  MarketCache,
-} from "@/lib/cache";
+interface QuoteCacheEntry {
+  data: LiveMarketQuote;
+  expiresAt: number;
+}
 
 export class MarketRepository {
-  private static quoteCache =
-    new Map<
-      string,
-      {
-        data: LiveMarketQuote[];
-        expiresAt: number;
-      }
-    >();
+  private static quoteCache = new Map<string, QuoteCacheEntry>();
+  private static quoteRequests = new Map<string, Promise<LiveMarketQuote>>();
+  private static candleRequests = new Map<string, Promise<MarketCandle[]>>();
+  private static budget = new RequestBudget();
 
-  /*
-   * In-flight requests prevent multiple callers
-   * from requesting the same provider resource
-   * simultaneously.
-   */
-  private static quoteRequests =
-    new Map<
-      string,
-      Promise<LiveMarketQuote[]>
-    >();
+  private static instrument(symbol: string) {
+    const instrument = findInstrument(symbol);
 
-  private static candleRequests =
-    new Map<
-      string,
-      Promise<MarketCandle[]>
-    >();
+    if (!instrument?.enabled || !instrument.providerSymbols.twelveData) {
+      throw new MarketDataError("Unsupported or unavailable instrument.", {
+        provider: "twelve-data",
+        retryable: false,
+      });
+    }
 
-  /*
-   * Provider cooldown.
-   *
-   * When Twelve Data returns HTTP 429, SmartPulse
-   * temporarily stops making new provider requests.
-   *
-   * Cached data can still be returned while the
-   * provider is cooling down.
-   */
-  private static providerCooldownUntil =
-    0;
+    return instrument;
+  }
 
-  private static readonly QUOTE_CACHE_DURATION =
-    60 * 1000;
+  static async getQuotes(symbols: string[]): Promise<LiveMarketQuote[]> {
+    const instruments = [
+      ...new Map(
+        symbols.map((symbol) => {
+          const instrument = this.instrument(symbol);
+          return [instrument.id, instrument] as const;
+        }),
+      ).values(),
+    ];
 
-  private static readonly PROVIDER_COOLDOWN_DURATION =
-    60 * 1000;
-
-  /**
-   * Check whether the market-data provider is
-   * currently in a local cooldown period.
-   */
-  private static isProviderCoolingDown(): boolean {
-    return (
-      Date.now() <
-      this.providerCooldownUntil
+    const results = await Promise.allSettled(
+      instruments.map((instrument) => this.getQuote(instrument.symbol)),
     );
-  }
-
-  /**
-   * Mark the provider as temporarily unavailable.
-   */
-  private static markProviderRateLimited(
-    error: MarketDataError
-  ): void {
-    if (
-      error.status !== 429
-    ) {
-      return;
-    }
-
-    this.providerCooldownUntil =
-      Date.now() +
-      this.PROVIDER_COOLDOWN_DURATION;
-  }
-
-  /**
-   * Create a consistent rate-limit error when
-   * SmartPulse blocks a request locally.
-   */
-  private static createCooldownError():
-    MarketDataError {
-    const remaining =
-      Math.max(
-        0,
-        Math.ceil(
-          (
-            this.providerCooldownUntil -
-            Date.now()
-          ) / 1000
-        )
-      );
-
-    return new MarketDataError(
-      `Market data provider is temporarily rate-limited. Retry in approximately ${remaining} seconds.`,
-      {
-        status: 429,
-        provider:
-          "twelve-data",
-        retryable: true,
-      }
+    const quotes = results.flatMap((result) =>
+      result.status === "fulfilled" ? [result.value] : [],
     );
+
+    // Partial baskets stay useful. Missing instruments remain missing.
+    if (quotes.length === 0) {
+      const failure = results.find((result) => result.status === "rejected");
+      if (failure?.status === "rejected") throw failure.reason;
+    }
+
+    return quotes;
   }
 
-  /**
-   * Get live market quotes.
-   *
-   * Quotes are cached for 60 seconds.
-   *
-   * Simultaneous requests for the same symbol
-   * collection share one provider request.
-   *
-   * If Twelve Data returns 429, SmartPulse enters
-   * a short provider cooldown and avoids making
-   * additional requests during that period.
-   */
-  static async getQuotes(
-    symbols: string[]
-  ): Promise<LiveMarketQuote[]> {
-    const normalizedSymbols =
-      symbols
-        .map((symbol) =>
-          symbol.trim().toUpperCase()
-        )
-        .filter(Boolean);
+  private static async getQuote(symbol: string): Promise<LiveMarketQuote> {
+    const instrument = this.instrument(symbol);
+    const key = "twelveData:" + instrument.id;
+    const cached = this.quoteCache.get(key);
 
-    if (
-      normalizedSymbols.length === 0
-    ) {
-      return [];
-    }
+    if (cached && Date.now() < cached.expiresAt) return cached.data;
+    this.quoteCache.delete(key);
 
-    const cacheKey =
-      [...normalizedSymbols]
-        .sort()
-        .join(",");
+    const existing = this.quoteRequests.get(key);
+    if (existing) return existing;
 
-    const now =
-      Date.now();
+    const request = this.budget
+      .run(() => MarketDataService.quotes([instrument.symbol]))
+      .then((quotes) => {
+        const quote = quotes.find(
+          (item) => findInstrument(item.symbol)?.id === instrument.id,
+        );
 
-    /*
-     * ------------------------------------------------
-     * COMPLETED CACHE
-     * ------------------------------------------------
-     *
-     * Always prefer valid cached data.
-     *
-     * This means a temporary provider outage does
-     * not automatically destroy recently available
-     * market information.
-     */
-
-    const memoryCache =
-      this.quoteCache.get(
-        cacheKey
-      );
-
-    if (
-      memoryCache &&
-      now < memoryCache.expiresAt
-    ) {
-      return memoryCache.data;
-    }
-
-    /*
-     * ------------------------------------------------
-     * PROVIDER COOLDOWN
-     * ------------------------------------------------
-     */
-
-    if (
-      this.isProviderCoolingDown()
-    ) {
-      throw this.createCooldownError();
-    }
-
-    /*
-     * ------------------------------------------------
-     * IN-FLIGHT REQUEST
-     * ------------------------------------------------
-     */
-
-    const existingRequest =
-      this.quoteRequests.get(
-        cacheKey
-      );
-
-    if (existingRequest) {
-      return existingRequest;
-    }
-
-    /*
-     * ------------------------------------------------
-     * PROVIDER REQUEST
-     * ------------------------------------------------
-     */
-
-    const request =
-      MarketDataService.quotes(
-        normalizedSymbols
-      )
-        .then((quotes) => {
-          this.quoteCache.set(
-            cacheKey,
+        if (!quote) {
+          throw new MarketDataError(
+            "Provider returned no quote for the requested instrument.",
             {
-              data: quotes,
-              expiresAt:
-                Date.now() +
-                this.QUOTE_CACHE_DURATION,
-            }
+              provider: "twelve-data",
+            },
           );
+        }
 
-          return quotes;
-        })
-        .catch((error) => {
-          if (
-            error instanceof
-              MarketDataError &&
-            error.status === 429
-          ) {
-            this.markProviderRateLimited(
-              error
-            );
-          }
+        this.quoteCache.set(key, { data: quote, expiresAt: Date.now() + 60_000 });
+        return quote;
+      })
+      .finally(() => this.quoteRequests.delete(key));
 
-          throw error;
-        })
-        .finally(() => {
-          this.quoteRequests.delete(
-            cacheKey
-          );
-        });
-
-    this.quoteRequests.set(
-      cacheKey,
-      request
-    );
-
+    this.quoteRequests.set(key, request);
     return request;
   }
 
-  /**
-   * Get historical OHLC candles.
-   *
-   * Candle data is cached for 60 seconds.
-   *
-   * Simultaneous requests for the same
-   * symbol, interval and output size share
-   * one provider request.
-   *
-   * The same provider cooldown used by quotes
-   * also protects candle requests.
-   */
   static async getCandles(
     symbol: string,
     interval: CandleInterval,
-    outputsize: number = 200
+    outputsize = 200,
   ): Promise<MarketCandle[]> {
-    const normalizedSymbol =
-      symbol.trim().toUpperCase();
+    const instrument = this.instrument(symbol);
 
-    if (!normalizedSymbol) {
-      throw new Error(
-        "Market symbol is required."
-      );
+    if (!Number.isInteger(outputsize) || outputsize < 1 || outputsize > 5000) {
+      throw new MarketDataError("Candle outputsize must be between 1 and 5000.");
     }
 
-    if (
-      !Number.isInteger(outputsize) ||
-      outputsize <= 0
-    ) {
-      throw new Error(
-        "outputsize must be a positive integer."
-      );
-    }
+    const key = ["twelveData", instrument.id, interval, outputsize].join("|");
+    const cacheIdentity = "twelveData:" + instrument.id;
+    const cached = MarketCache.get(cacheIdentity, interval, outputsize);
+    if (cached) return cached;
 
-    const cacheKey =
-      [
-        normalizedSymbol,
-        interval,
-        outputsize,
-      ].join("|");
+    const existing = this.candleRequests.get(key);
+    if (existing) return existing;
 
-    const memoryCache =
-      MarketCache.get(
-        normalizedSymbol,
-        interval,
-        outputsize
-    );
-
-    if (memoryCache) {
-      return memoryCache;
-    }
-
-    /*
-     * ------------------------------------------------
-     * PROVIDER COOLDOWN
-     * ------------------------------------------------
-     */
-
-    if (
-      this.isProviderCoolingDown()
-    ) {
-      throw this.createCooldownError();
-    }
-
-    /*
-     * ------------------------------------------------
-     * IN-FLIGHT REQUEST
-     * ------------------------------------------------
-     */
-
-    const existingRequest =
-      this.candleRequests.get(
-        cacheKey
-      );
-
-    if (existingRequest) {
-      return existingRequest;
-    }
-
-    /*
-     * ------------------------------------------------
-     * PROVIDER REQUEST
-     * ------------------------------------------------
-     */
-
-    const candleRequest =
-      MarketDataService.candles(
-        normalizedSymbol,
-        interval,
-        outputsize
-      )
-        .then((candles) => {
-          MarketCache.set(
-            normalizedSymbol,
-            interval,
-            candles,
-            60,
-            outputsize
-        );
+    const request = this.budget
+      .run(() => MarketDataService.candles(instrument.symbol, interval, outputsize))
+      .then((candles) => {
+        MarketCache.set(cacheIdentity, interval, candles, 60, outputsize);
         return candles;
       })
-        .catch((error) => {
-          if (
-            error instanceof MarketDataError &&
-            error.status === 429
-          ) {
-            this.markProviderRateLimited(error);
+      .finally(() => this.candleRequests.delete(key));
 
-          }
-
-          throw error;
-        })
-        .finally(() => {
-          this.candleRequests.delete(
-            cacheKey
-          );
-        });
-
-    this.candleRequests.set(
-      cacheKey,
-      candleRequest
-    );
-
-    return candleRequest;
+    this.candleRequests.set(key, request);
+    return request;
   }
 
-  /**
-   * Clear all completed cache,
-   * in-flight request and provider cooldown state.
-   */
+  /** Tests/maintenance only; never clear the quota on ordinary navigation. */
   static clearCache(): void {
     this.quoteCache.clear();
-
     this.quoteRequests.clear();
-
     this.candleRequests.clear();
-
-    this.providerCooldownUntil =
-      0;
+    this.budget = new RequestBudget();
     MarketCache.clear();
   }
 }

@@ -27,6 +27,8 @@ Your responsibility is to explain deterministic market intelligence.
 Never generate trading signals.
 Never predict price.
 Never invent technical data.
+Treat ICT, SMC and price action as one evidence chain. Preserve missing-data and conflict states.
+Confluence is evidence agreement, never a probability of winning. Do not upgrade waiting to confirmation.
 
 Explain only the supplied institutional and macro context using professional, concise financial English.
 `.trim(),
@@ -60,6 +62,12 @@ ${setup.summary}
 
 EXPLANATION:
 ${setup.explanation}
+
+PRICE ACTION STATE:
+${setup.priceAction?.state ?? "Unavailable in this snapshot"}
+
+CONFLICTS AND LIMITATIONS:
+${[...(setup.priceAction?.conflicts ?? []), ...(setup.priceAction?.missing ?? [])].join("\n")}
 
 ========================
 MACRO INTELLIGENCE

@@ -1,126 +1,32 @@
-import { MarketInstrument } from "./types";
+import { getActiveMarketUniverse } from "@/lib/market/market-universe";
+import { canAccessMarket } from "@/lib/billing/market-access";
+import type { MarketInstrument, SubscriptionPlan } from "./types";
 
-export const MARKET_REGISTRY: MarketInstrument[] = [
-  {
-    symbol: "EURUSD",
-    displayName: "EUR/USD",
-    assetClass: "forex",
-    category: "major",
-    baseCurrency: "EUR",
-    quoteCurrency: "USD",
-    priority: 5,
-    tradingSessions: ["london", "new-york"],
-    tradingDays: [1, 2, 3, 4, 5],
-    supportedPlans: ["trial", "starter", "pro", "elite"],
-    trialEnabled: true,
-    pulseModules: [
-      "technical",
-      "fundamental",
-      "macro",
-      "sentiment",
-      "liquidity",
-    ],
-  },
-
-  {
-    symbol: "GBPUSD",
-    displayName: "GBP/USD",
-    assetClass: "forex",
-    category: "major",
-    baseCurrency: "GBP",
-    quoteCurrency: "USD",
-    priority: 5,
-    tradingSessions: ["london", "new-york"],
-    tradingDays: [1, 2, 3, 4, 5],
-    supportedPlans: ["trial", "starter", "pro", "elite"],
-    trialEnabled: true,
-    pulseModules: [
-      "technical",
-      "fundamental",
-      "macro",
-      "sentiment",
-      "liquidity",
-    ],
-  },
-
-  {
-    symbol: "USDJPY",
-    displayName: "USD/JPY",
-    assetClass: "forex",
-    category: "major",
-    baseCurrency: "USD",
-    quoteCurrency: "JPY",
-    priority: 4,
-    tradingSessions: ["tokyo", "london"],
-    tradingDays: [1, 2, 3, 4, 5],
-    supportedPlans: ["starter", "pro", "elite"],
+// Compatibility projection for onboarding; no separate instrument definitions.
+export const MARKET_REGISTRY: MarketInstrument[] = getActiveMarketUniverse().map(
+  (instrument) => ({
+    symbol: instrument.id,
+    displayName: instrument.symbol,
+    assetClass: instrument.assetClass,
+    category:
+      instrument.assetClass === "forex"
+        ? instrument.category === "major"
+          ? "major"
+          : "minor"
+        : instrument.assetClass,
+    baseCurrency: instrument.baseAsset,
+    quoteCurrency: instrument.quoteAsset,
+    priority: instrument.tier === "core" ? 5 : instrument.tier === "secondary" ? 4 : 3,
+    tradingSessions: [],
+    tradingDays:
+      instrument.assetClass === "crypto" ? [0, 1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5],
+    supportedPlans: (["starter", "pro", "elite"] as SubscriptionPlan[]).filter((plan) =>
+      canAccessMarket(
+        plan === "starter" ? "basic" : plan === "trial" ? "none" : plan,
+        instrument.id,
+      ),
+    ),
     trialEnabled: false,
-    pulseModules: [
-      "technical",
-      "fundamental",
-      "macro",
-      "sentiment",
-      "liquidity",
-    ],
-  },
-
-  {
-    symbol: "XAUUSD",
-    displayName: "Gold",
-    assetClass: "metal",
-    category: "metal",
-    priority: 5,
-    tradingSessions: ["london", "new-york"],
-    tradingDays: [1, 2, 3, 4, 5],
-    supportedPlans: ["trial", "pro", "elite"],
-    trialEnabled: true,
-    pulseModules: [
-      "technical",
-      "fundamental",
-      "macro",
-      "sentiment",
-      "liquidity",
-    ],
-  },
-
-  {
-    symbol: "US30",
-    displayName: "US30",
-    assetClass: "index",
-    category: "index",
-    priority: 5,
-    tradingSessions: ["new-york"],
-    tradingDays: [1, 2, 3, 4, 5],
-    supportedPlans: ["pro", "elite"],
-    trialEnabled: false,
-    pulseModules: [
-      "technical",
-      "fundamental",
-      "macro",
-      "sentiment",
-      "liquidity",
-    ],
-  },
-
-  {
-    symbol: "BTCUSD",
-    displayName: "Bitcoin",
-    assetClass: "crypto",
-    category: "crypto",
-    priority: 4,
-    tradingSessions: [
-      "sydney",
-      "tokyo",
-      "london",
-      "new-york",
-    ],
-    tradingDays: [0, 1, 2, 3, 4, 5, 6],
-    supportedPlans: ["elite"],
-    trialEnabled: false,
-    pulseModules: [
-      "technical",
-      "sentiment",
-      "macro",
-    ],
-  },
-];
+    pulseModules: ["technical", "liquidity"],
+  }),
+);

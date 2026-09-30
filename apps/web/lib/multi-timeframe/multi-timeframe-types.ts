@@ -1,8 +1,6 @@
-export type Timeframe =
-  | "5min"
-  | "15min"
-  | "1h"
-  | "4h";
+import type { CandleInterval } from "@/lib/market";
+
+export type Timeframe = CandleInterval;
 
 export type Trend =
   | "bullish"
@@ -18,7 +16,11 @@ export type Alignment =
   | "strong"
   | "moderate"
   | "weak"
-  | "mixed";
+  | "mixed"
+  | "aligned"
+  | "partially_aligned"
+  | "countertrend"
+  | "range_context";
 
 export type InstitutionalBias =
   | "continuation"

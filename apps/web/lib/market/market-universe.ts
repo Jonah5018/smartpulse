@@ -1,426 +1,400 @@
-import type {
-  MarketType,
-} from "./market-types";
+import type { MarketType } from "./market-types";
 
-
-/**
- * Market analysis priority.
- *
- * Core:
- * Highest-priority markets that receive
- * the deepest SmartPulse analysis.
- *
- * Secondary:
- * Important markets that can be scanned
- * and promoted when conditions are strong.
- *
- * Extended:
- * Broader market coverage that can be
- * analyzed at a lower frequency.
- */
-export type MarketTier =
-  | "core"
-  | "secondary"
-  | "extended";
-
+export type MarketTier = "core" | "secondary" | "extended";
+export type InstrumentAssetClass = "forex" | "metal" | "crypto" | "index";
+export type MarketDataProviderId = "twelveData";
 
 export interface MarketInstrument {
+  id: string;
   symbol: string;
-
   name: string;
-
+  assetClass: InstrumentAssetClass;
   type: MarketType;
-
+  category: "major" | "cross" | "gold" | "silver" | "us" | "europe" | "asia";
+  baseAsset?: string;
+  quoteAsset?: string;
   enabled: boolean;
-
   priority: number;
-
   tier: MarketTier;
+  aliases: readonly string[];
+  providerSymbols: Partial<Record<MarketDataProviderId, string>>;
+  unavailableReason?: string;
 }
 
-
-/**
- * SmartPulse's supported market universe.
- *
- * `enabled` determines which instruments
- * participate in the current analysis cycle.
- *
- * `priority` determines which instruments
- * should be considered first when provider
- * limits or analysis capacity exist.
- *
- * `tier` determines the depth/frequency of
- * attention the market should eventually receive.
- */
-export const MARKET_UNIVERSE:
-  MarketInstrument[] = [
-
-  /*
-   * ------------------------------------------------
-   * FOREX — CORE
-   * ------------------------------------------------
-   */
-
+// The sole instrument configuration. Display symbols remain compatible with
+// existing profile preferences, Journal records and public analysis outputs.
+export const MARKET_UNIVERSE: readonly MarketInstrument[] = [
   {
+    id: "GBPUSD",
     symbol: "GBP/USD",
-
-    name:
-      "British Pound / US Dollar",
-
+    name: "British Pound / US Dollar",
+    assetClass: "forex",
     type: "forex",
-
+    category: "major",
+    baseAsset: "GBP",
+    quoteAsset: "USD",
     enabled: true,
-
     priority: 100,
-
     tier: "core",
+    aliases: [],
+    providerSymbols: { twelveData: "GBP/USD" },
   },
 
   {
+    id: "EURUSD",
     symbol: "EUR/USD",
-
-    name:
-      "Euro / US Dollar",
-
+    name: "Euro / US Dollar",
+    assetClass: "forex",
     type: "forex",
-
+    category: "major",
+    baseAsset: "EUR",
+    quoteAsset: "USD",
     enabled: true,
-
     priority: 95,
-
     tier: "core",
+    aliases: [],
+    providerSymbols: { twelveData: "EUR/USD" },
   },
 
   {
+    id: "USDJPY",
     symbol: "USD/JPY",
-
-    name:
-      "US Dollar / Japanese Yen",
-
+    name: "US Dollar / Japanese Yen",
+    assetClass: "forex",
     type: "forex",
-
+    category: "major",
+    baseAsset: "USD",
+    quoteAsset: "JPY",
     enabled: true,
-
     priority: 90,
-
     tier: "core",
-  },
-
-
-  /*
-   * ------------------------------------------------
-   * FOREX — SECONDARY
-   * ------------------------------------------------
-   */
-
-  {
-    symbol: "GBP/JPY",
-
-    name:
-      "British Pound / Japanese Yen",
-
-    type: "forex",
-
-    enabled: false,
-
-    priority: 85,
-
-    tier: "secondary",
+    aliases: [],
+    providerSymbols: { twelveData: "USD/JPY" },
   },
 
   {
-    symbol: "EUR/JPY",
-
-    name:
-      "Euro / Japanese Yen",
-
-    type: "forex",
-
-    enabled: false,
-
-    priority: 80,
-
-    tier: "secondary",
-  },
-
-  {
-    symbol: "AUD/USD",
-
-    name:
-      "Australian Dollar / US Dollar",
-
-    type: "forex",
-
-    enabled: false,
-
-    priority: 75,
-
-    tier: "secondary",
-  },
-
-  {
-    symbol: "USD/CAD",
-
-    name:
-      "US Dollar / Canadian Dollar",
-
-    type: "forex",
-
-    enabled: false,
-
-    priority: 70,
-
-    tier: "secondary",
-  },
-
-  {
+    id: "USDCHF",
     symbol: "USD/CHF",
-
-    name:
-      "US Dollar / Swiss Franc",
-
+    name: "US Dollar / Swiss Franc",
+    assetClass: "forex",
     type: "forex",
-
-    enabled: false,
-
-    priority: 65,
-
-    tier: "secondary",
-  },
-
-
-  /*
-   * ------------------------------------------------
-   * COMMODITIES — CORE
-   * ------------------------------------------------
-   */
-
-  {
-    symbol: "XAU/USD",
-
-    name:
-      "Gold / US Dollar",
-
-    type: "commodity",
-
+    category: "major",
+    baseAsset: "USD",
+    quoteAsset: "CHF",
     enabled: true,
-
-    priority: 100,
-
-    tier: "core",
-  },
-
-
-  /*
-   * ------------------------------------------------
-   * COMMODITIES — SECONDARY
-   * ------------------------------------------------
-   */
-
-  {
-    symbol: "XAG/USD",
-
-    name:
-      "Silver / US Dollar",
-
-    type: "commodity",
-
-    enabled: false,
-
-    priority: 80,
-
-    tier: "secondary",
-  },
-
-
-  /*
-   * ------------------------------------------------
-   * CRYPTO — EXTENDED
-   * ------------------------------------------------
-   */
-
-  {
-    symbol: "BTC/USD",
-
-    name:
-      "Bitcoin / US Dollar",
-
-    type: "crypto",
-
-    enabled: false,
-
-    priority: 70,
-
-    tier: "extended",
-  },
-
-  {
-    symbol: "ETH/USD",
-
-    name:
-      "Ethereum / US Dollar",
-
-    type: "crypto",
-
-    enabled: false,
-
     priority: 65,
-
-    tier: "extended",
-  },
-
-
-  /*
-   * ------------------------------------------------
-   * INDICES — EXTENDED
-   * ------------------------------------------------
-   *
-   * These remain disabled until the exact
-   * provider symbol conventions are verified.
-   */
-
-  {
-    symbol: "SPX",
-
-    name:
-      "S&P 500",
-
-    type: "index",
-
-    enabled: false,
-
-    priority: 60,
-
-    tier: "extended",
+    tier: "secondary",
+    aliases: [],
+    providerSymbols: { twelveData: "USD/CHF" },
   },
 
   {
+    id: "USDCAD",
+    symbol: "USD/CAD",
+    name: "US Dollar / Canadian Dollar",
+    assetClass: "forex",
+    type: "forex",
+    category: "major",
+    baseAsset: "USD",
+    quoteAsset: "CAD",
+    enabled: true,
+    priority: 70,
+    tier: "secondary",
+    aliases: [],
+    providerSymbols: { twelveData: "USD/CAD" },
+  },
+
+  {
+    id: "AUDUSD",
+    symbol: "AUD/USD",
+    name: "Australian Dollar / US Dollar",
+    assetClass: "forex",
+    type: "forex",
+    category: "major",
+    baseAsset: "AUD",
+    quoteAsset: "USD",
+    enabled: true,
+    priority: 75,
+    tier: "secondary",
+    aliases: [],
+    providerSymbols: { twelveData: "AUD/USD" },
+  },
+
+  {
+    id: "NZDUSD",
+    symbol: "NZD/USD",
+    name: "New Zealand Dollar / US Dollar",
+    assetClass: "forex",
+    type: "forex",
+    category: "major",
+    baseAsset: "NZD",
+    quoteAsset: "USD",
+    enabled: true,
+    priority: 65,
+    tier: "secondary",
+    aliases: [],
+    providerSymbols: { twelveData: "NZD/USD" },
+  },
+
+  {
+    id: "GBPJPY",
+    symbol: "GBP/JPY",
+    name: "British Pound / Japanese Yen",
+    assetClass: "forex",
+    type: "forex",
+    category: "cross",
+    baseAsset: "GBP",
+    quoteAsset: "JPY",
+    enabled: true,
+    priority: 85,
+    tier: "secondary",
+    aliases: [],
+    providerSymbols: { twelveData: "GBP/JPY" },
+  },
+
+  {
+    id: "EURJPY",
+    symbol: "EUR/JPY",
+    name: "Euro / Japanese Yen",
+    assetClass: "forex",
+    type: "forex",
+    category: "cross",
+    baseAsset: "EUR",
+    quoteAsset: "JPY",
+    enabled: true,
+    priority: 80,
+    tier: "secondary",
+    aliases: [],
+    providerSymbols: { twelveData: "EUR/JPY" },
+  },
+
+  {
+    id: "EURGBP",
+    symbol: "EUR/GBP",
+    name: "Euro / British Pound",
+    assetClass: "forex",
+    type: "forex",
+    category: "cross",
+    baseAsset: "EUR",
+    quoteAsset: "GBP",
+    enabled: true,
+    priority: 75,
+    tier: "secondary",
+    aliases: [],
+    providerSymbols: { twelveData: "EUR/GBP" },
+  },
+
+  {
+    id: "AUDJPY",
+    symbol: "AUD/JPY",
+    name: "Australian Dollar / Japanese Yen",
+    assetClass: "forex",
+    type: "forex",
+    category: "cross",
+    baseAsset: "AUD",
+    quoteAsset: "JPY",
+    enabled: true,
+    priority: 70,
+    tier: "secondary",
+    aliases: [],
+    providerSymbols: { twelveData: "AUD/JPY" },
+  },
+
+  {
+    id: "XAUUSD",
+    symbol: "XAU/USD",
+    name: "Gold / US Dollar",
+    assetClass: "metal",
+    type: "commodity",
+    category: "gold",
+    baseAsset: "XAU",
+    quoteAsset: "USD",
+    enabled: true,
+    priority: 100,
+    tier: "core",
+    aliases: [],
+    providerSymbols: { twelveData: "XAU/USD" },
+  },
+
+  {
+    id: "XAGUSD",
+    symbol: "XAG/USD",
+    name: "Silver / US Dollar",
+    assetClass: "metal",
+    type: "commodity",
+    category: "silver",
+    baseAsset: "XAG",
+    quoteAsset: "USD",
+    enabled: true,
+    priority: 80,
+    tier: "secondary",
+    aliases: [],
+    providerSymbols: { twelveData: "XAG/USD" },
+  },
+
+  {
+    id: "BTCUSD",
+    symbol: "BTC/USD",
+    name: "Bitcoin / US Dollar",
+    assetClass: "crypto",
+    type: "crypto",
+    category: "major",
+    baseAsset: "BTC",
+    quoteAsset: "USD",
+    enabled: true,
+    priority: 70,
+    tier: "extended",
+    aliases: [],
+    providerSymbols: { twelveData: "BTC/USD" },
+  },
+
+  {
+    id: "ETHUSD",
+    symbol: "ETH/USD",
+    name: "Ethereum / US Dollar",
+    assetClass: "crypto",
+    type: "crypto",
+    category: "major",
+    baseAsset: "ETH",
+    quoteAsset: "USD",
+    enabled: true,
+    priority: 65,
+    tier: "extended",
+    aliases: [],
+    providerSymbols: { twelveData: "ETH/USD" },
+  },
+
+  {
+    id: "NAS100",
     symbol: "NDX",
-
-    name:
-      "Nasdaq 100",
-
+    name: "Nasdaq 100",
+    assetClass: "index",
     type: "index",
-
+    category: "us",
+    quoteAsset: "USD",
     enabled: false,
-
     priority: 55,
-
     tier: "extended",
+    aliases: ["NASDAQ100", "USTEC", "US100"],
+    providerSymbols: {},
+    unavailableReason: "Provider mapping and exchange calendar are not verified.",
+  },
+
+  {
+    id: "SP500",
+    symbol: "SPX",
+    name: "S&P 500",
+    assetClass: "index",
+    type: "index",
+    category: "us",
+    quoteAsset: "USD",
+    enabled: false,
+    priority: 55,
+    tier: "extended",
+    aliases: ["SPX500", "US500"],
+    providerSymbols: {},
+    unavailableReason: "Provider mapping and exchange calendar are not verified.",
+  },
+
+  {
+    id: "US30",
+    symbol: "US30",
+    name: "Dow Jones 30",
+    assetClass: "index",
+    type: "index",
+    category: "us",
+    quoteAsset: "USD",
+    enabled: false,
+    priority: 55,
+    tier: "extended",
+    aliases: ["DJI", "DJ30", "DOW30"],
+    providerSymbols: {},
+    unavailableReason: "Provider mapping and exchange calendar are not verified.",
   },
 ];
 
+const aliasKey = (value: string) => value.trim().toUpperCase().replaceAll("/", "");
+const instrumentsByAlias = new Map<string, MarketInstrument>();
 
-/**
- * Return all active instruments.
- *
- * Results are ordered from highest priority
- * to lowest priority.
- */
-export function getActiveMarketUniverse():
-  MarketInstrument[] {
-  return MARKET_UNIVERSE
-    .filter(
-      (instrument) =>
-        instrument.enabled
-    )
-    .sort(
-      (a, b) =>
-        b.priority -
-        a.priority
-    );
+for (const instrument of MARKET_UNIVERSE) {
+  for (const alias of [instrument.id, instrument.symbol, ...instrument.aliases]) {
+    const key = aliasKey(alias);
+    const existing = instrumentsByAlias.get(key);
+
+    if (existing && existing.id !== instrument.id) {
+      throw new Error("Ambiguous instrument alias: " + alias);
+    }
+
+    instrumentsByAlias.set(key, instrument);
+  }
 }
 
-
-/**
- * Return active market symbols only.
- */
-export function getActiveMarketSymbols():
-  string[] {
-  return getActiveMarketUniverse()
-    .map(
-      (instrument) =>
-        instrument.symbol
-    );
+export function findInstrument(value: string): MarketInstrument | undefined {
+  return instrumentsByAlias.get(aliasKey(value));
 }
 
+export function requireInstrument(value: string): MarketInstrument {
+  const instrument = findInstrument(value);
 
-/**
- * Return markets belonging to a particular
- * market type.
- *
- * Only enabled markets are returned because
- * this function is intended for active analysis.
- */
-export function getMarketsByType(
-  type: MarketType
-): MarketInstrument[] {
-  return MARKET_UNIVERSE
-    .filter(
-      (instrument) =>
-        instrument.type === type &&
-        instrument.enabled
-    )
-    .sort(
-      (a, b) =>
-        b.priority -
-        a.priority
-    );
+  if (!instrument) {
+    throw new Error("Unsupported instrument.");
+  }
+
+  return instrument;
 }
 
-
-/**
- * Return active markets belonging to
- * a particular analysis tier.
- */
-export function getMarketsByTier(
-  tier: MarketTier
-): MarketInstrument[] {
-  return MARKET_UNIVERSE
-    .filter(
-      (instrument) =>
-        instrument.tier === tier &&
-        instrument.enabled
-    )
-    .sort(
-      (a, b) =>
-        b.priority -
-        a.priority
-    );
+export function canonicalInstrumentId(value: string): string {
+  return requireInstrument(value).id;
 }
 
+export function getProviderSymbol(
+  value: string,
+  provider: MarketDataProviderId,
+): string | null {
+  return requireInstrument(value).providerSymbols[provider] ?? null;
+}
 
-/**
- * Return all active markets grouped
- * by their analysis tier.
- */
-export function getActiveMarketsByTier():
-  Record<
-    MarketTier,
-    MarketInstrument[]
-  > {
+export function getActiveMarketUniverse(): MarketInstrument[] {
+  return MARKET_UNIVERSE.filter((instrument) => instrument.enabled).sort(
+    (left, right) => right.priority - left.priority,
+  );
+}
+
+export function getActiveMarketSymbols(): string[] {
+  return getActiveMarketUniverse().map((instrument) => instrument.symbol);
+}
+
+export function getMarketsByType(type: MarketType): MarketInstrument[] {
+  return getActiveMarketUniverse().filter((instrument) => instrument.type === type);
+}
+
+export function getMarketsByTier(tier: MarketTier): MarketInstrument[] {
+  return getActiveMarketUniverse().filter((instrument) => instrument.tier === tier);
+}
+
+export function getActiveMarketsByTier(): Record<MarketTier, MarketInstrument[]> {
   return {
-    core:
-      getMarketsByTier(
-        "core"
-      ),
-
-    secondary:
-      getMarketsByTier(
-        "secondary"
-      ),
-
-    extended:
-      getMarketsByTier(
-        "extended"
-      ),
+    core: getMarketsByTier("core"),
+    secondary: getMarketsByTier("secondary"),
+    extended: getMarketsByTier("extended"),
   };
 }
-/** Accept legacy onboarding identifiers such as GBPUSD as well as GBP/USD. */
+
+export function getActiveMarketGroups(): Record<string, MarketInstrument[]> {
+  const groups: Record<string, MarketInstrument[]> = {};
+
+  for (const instrument of getActiveMarketUniverse()) {
+    const key = instrument.assetClass + " · " + instrument.category;
+    (groups[key] ??= []).push(instrument);
+  }
+
+  return groups;
+}
+
+// Compatibility for stored preferences only. Provider and analysis boundaries
+// must call requireInstrument/findInstrument rather than trusting this helper.
 export function normalizeMarketSymbol(symbol: string): string {
-  const normalized = symbol.trim().toUpperCase();
-  const compact = normalized.replaceAll("/", "");
-  return MARKET_UNIVERSE.find((market) => market.symbol.replaceAll("/", "") === compact)?.symbol ?? normalized;
+  return findInstrument(symbol)?.symbol ?? symbol.trim().toUpperCase();
 }
 
 export function normalizeMarketSymbols(symbols: string[]): string[] {

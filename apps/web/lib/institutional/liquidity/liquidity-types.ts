@@ -17,6 +17,8 @@ export interface LiquidityPool {
 
   secondIndex: number;
 
+  confirmedIndex?: number;
+
   touches: number;
 
   confidence: number;
@@ -45,6 +47,12 @@ export interface LiquiditySweep {
  * Complete institutional liquidity analysis.
  */
 export interface LiquidityAnalysis {
+  interactions?: Array<{
+    side: LiquidityPoolType;
+    price: number;
+    kind: "untouched" | "touch" | "sweep_reversal" | "close_beyond";
+  }>;
+
   symbol: string;
 
   timeframe: string;

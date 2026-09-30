@@ -36,7 +36,7 @@ export class ExecutionReadinessAnalyzer {
       score += 30;
     } else {
       missing.push(
-        "Confluence score too low."
+        "Confluence or contextual confirmation is incomplete."
       );
     }
 

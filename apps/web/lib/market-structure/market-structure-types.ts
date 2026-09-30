@@ -40,6 +40,9 @@ export interface MarketStructureAnalysis {
 
   confidence: number;
 
+  /** Confirmed pivots only, shared by liquidity and APA location analysis. */
+  swings?: Array<SwingPoint & { index: number; confirmedIndex: number }>;
+
   swingHigh: SwingPoint | null;
 
   swingLow: SwingPoint | null;

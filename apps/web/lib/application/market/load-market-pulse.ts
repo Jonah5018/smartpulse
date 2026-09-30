@@ -1,11 +1,10 @@
+import { scheduledScanSymbols } from "@/lib/market-scanner/scan-schedule";
+import { findInstrument } from "@/lib/market/market-universe";
 import {
   MarketService,
   MockMarketProvider,
 } from "@/lib/market";
 
-import type {
-  MarketType,
-} from "@/lib/market";
 
 import type {
   MarketQuote,
@@ -41,10 +40,6 @@ import {
 } from "@/lib/market-scanner";
 
 import {
-  getActiveMarketSymbols,
-} from "@/lib/market/market-universe";
-
-import {
   MarketSelectionService,
 } from "@/lib/market-selection";
 
@@ -57,7 +52,7 @@ export class LoadMarketPulse {
       new MockMarketProvider();
 
     const symbols =
-      getActiveMarketSymbols();
+      scheduledScanSymbols();
 
 
     /*
@@ -82,7 +77,7 @@ export class LoadMarketPulse {
      * request pipeline.
      */
 
-    if (!session.isOpen) {
+    if (symbols.length === 0) {
       return {
         quotes: [], pulse: MarketService.buildPulse([], session), session,
         marketScan: [], opportunities: {}, focusScores: [], topFocus: null,
@@ -208,14 +203,7 @@ export class LoadMarketPulse {
               }
 
 
-              const marketType =
-                (
-                  quote.symbol ===
-                  "XAU/USD"
-                    ? "commodity"
-                    : "forex"
-                ) as MarketType;
-
+              const marketType = findInstrument(quote.symbol)?.type ?? "forex";
 
               return {
                 symbol:
@@ -349,7 +337,7 @@ export class LoadMarketPulse {
     try {
       const analysisEntries =
         await Promise.all(
-          symbols.map(
+          symbols.slice(0, 1).map(
             async (symbol) => {
               const setup =
                 await InstitutionalSetupService.current(
@@ -534,7 +522,7 @@ export class LoadMarketPulse {
 
           message:
             priceQuotes.length > 0
-              ? "Live market prices and analysis are available. Bid/ask spreads may be unavailable."
+              ? "Live analysis covers the current scan window. Missing quotes and bid/ask spreads remain unavailable."
               : "Live market prices are temporarily unavailable.",
         },
       };

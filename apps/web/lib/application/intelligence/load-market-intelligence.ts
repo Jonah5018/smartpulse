@@ -1,3 +1,6 @@
+import { discoverySymbols } from "@/lib/market-scanner/scan-schedule";
+import { normalizeMarketSymbol, findInstrument } from "@/lib/market/market-universe";
+import { MarketDataError } from "@/lib/providers/market-data";
 import { InstitutionalSetupService } from "@/lib/institutional-setup";
 import { OpportunityService } from "@/lib/opportunity";
 import { FocusScoreService } from "@/lib/focus-score";
@@ -42,7 +45,10 @@ export class LoadMarketIntelligence {
     watchlist: string[] = []
   ): Promise<MarketIntelligenceResult> {
 
-    const normalizedSymbol = symbol.trim().toUpperCase();
+    const normalizedSymbol = normalizeMarketSymbol(symbol);
+    if (!findInstrument(normalizedSymbol)?.enabled) {
+      throw new MarketDataError("Unsupported or unavailable instrument.");
+    }
     const session = MarketSessionService.current();
     const availability = MarketAvailabilityService.current(normalizedSymbol);
     const result: MarketIntelligenceResult = {
@@ -82,13 +88,10 @@ export class LoadMarketIntelligence {
     Object.assign(result, requested);
     if (!requested.focus) result.unavailableSections.push("Focus score");
 
-    const discoverySymbols = getActiveMarketSymbols().filter(
-      (candidate) => candidate !== normalizedSymbol &&
-        MarketAvailabilityService.current(candidate).isOpen
-    );
+    const candidates = discoverySymbols(normalizedSymbol, watchlist);
 
     const [discovery] = await Promise.all([
-      Promise.allSettled(discoverySymbols.map((candidate) => this.analyze(candidate))),
+      Promise.allSettled(candidates.map((candidate) => this.analyze(candidate))),
       this.loadContext(result, requested),
     ]);
 

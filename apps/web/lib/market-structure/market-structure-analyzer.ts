@@ -104,10 +104,7 @@ export class MarketStructureAnalyzer {
         latestLow
       );
 
-    const latestCandle =
-      ordered[ordered.length - 1];
-
-    const previousStructure =
+const previousStructure =
       this.determinePreviousStructure(
         previousHigh,
         previousLow,
@@ -117,8 +114,8 @@ export class MarketStructureAnalyzer {
     const breakResult =
       this.detectStructuralBreak(
         ordered,
-        previousHigh,
-        previousLow,
+        latestHigh,
+        latestLow,
         trend
       );
 
@@ -169,6 +166,7 @@ export class MarketStructureAnalyzer {
       latestEvent,
       higherTimeframeBias,
       confidence,
+      swings: swings.map(swing => ({ ...swing, confirmedIndex: swing.index + swingStrength })),
       swingHigh: latestHigh
         ? this.publicSwing(latestHigh)
         : null,
@@ -288,8 +286,7 @@ export class MarketStructureAnalyzer {
             : "LL";
       }
 
-      current.classification =
-        classification;
+      current.classification = current.price === previous.price ? undefined : classification;
     }
   }
 
@@ -372,7 +369,9 @@ export class MarketStructureAnalyzer {
     if (
       previousHigh &&
       latest.close >
-        previousHigh.price
+        previousHigh.price &&
+      candles[candles.length - 2].close <= previousHigh.price &&
+      !candles.slice(previousHigh.index + 1, -1).some(candle => candle.close > previousHigh.price)
     ) {
       return {
         event:
@@ -391,7 +390,9 @@ export class MarketStructureAnalyzer {
     if (
       previousLow &&
       latest.close <
-        previousLow.price
+        previousLow.price &&
+      candles[candles.length - 2].close >= previousLow.price &&
+      !candles.slice(previousLow.index + 1, -1).some(candle => candle.close < previousLow.price)
     ) {
       return {
         event:

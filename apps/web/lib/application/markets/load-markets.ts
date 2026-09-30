@@ -1,3 +1,5 @@
+import { scheduledScanSymbols } from "@/lib/market-scanner/scan-schedule";
+import { MarketAvailabilityService } from "@/lib/market-session/market-availability-service";
 import {
   getActiveMarketUniverse,
 } from "@/lib/market/market-universe";
@@ -52,7 +54,7 @@ export class LoadMarkets {
      * ------------------------------------------------
      */
 
-    if (!session.isOpen) {
+    if (!universe.some(instrument => MarketAvailabilityService.current(instrument.id).isOpen)) {
       return {
         session,
 
@@ -110,11 +112,7 @@ export class LoadMarkets {
      * ------------------------------------------------
      */
 
-    const symbols =
-      universe.map(
-        (market) =>
-          market.symbol
-      );
+    const symbols = scheduledScanSymbols();
 
     try {
       const quotes =
@@ -217,7 +215,7 @@ export class LoadMarkets {
 
           message:
             quotes.length > 0
-              ? "Live market data is available."
+              ? "Live quotes are shown for the current scan window. Unquoted markets remain unavailable until their next refresh."
               : "No live market quotes are currently available.",
         },
       };

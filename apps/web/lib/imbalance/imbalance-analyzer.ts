@@ -403,7 +403,8 @@ export class ImbalanceAnalyzer {
                 candles,
                 i,
                 low,
-                high
+                high,
+                "bullish"
               ),
 
             mitigationPercent:
@@ -411,7 +412,8 @@ export class ImbalanceAnalyzer {
                 candles,
                 i,
                 low,
-                high
+                high,
+                "bullish"
               ),
 
             strength:
@@ -477,7 +479,8 @@ export class ImbalanceAnalyzer {
                 candles,
                 i,
                 low,
-                high
+                high,
+                "bearish"
               ),
 
             mitigationPercent:
@@ -485,7 +488,8 @@ export class ImbalanceAnalyzer {
                 candles,
                 i,
                 low,
-                high
+                high,
+                "bearish"
               ),
 
             strength:
@@ -517,101 +521,30 @@ export class ImbalanceAnalyzer {
     candles: MarketCandle[],
     formationIndex: number,
     low: number,
-    high: number
+    high: number,
+    direction: "bullish" | "bearish"
   ): boolean {
-    for (
-      let i =
-        formationIndex + 1;
-      i < candles.length;
-      i++
-    ) {
-      const candle =
-        candles[i];
-
-      if (
-        candle.low <=
-          low &&
-        candle.high >=
-          high
-      ) {
-        return true;
-      }
-    }
-
-    return false;
+    return this.calculateMitigation(candles, formationIndex, low, high, direction) >= 100;
   }
 
   private static calculateMitigation(
     candles: MarketCandle[],
     formationIndex: number,
     low: number,
-    high: number
+    high: number,
+    direction: "bullish" | "bearish"
   ): number {
-    const size =
-      high - low;
+    if (high <= low) return 100;
 
-    if (size <= 0) {
-      return 100;
+    let maximum = 0;
+
+    for (const candle of candles.slice(formationIndex + 1)) {
+      const penetration = direction === "bullish" ? high - candle.low : candle.high - low;
+      maximum = Math.max(maximum, this.clamp(penetration / (high - low) * 100, 0, 100));
     }
 
-    let maximumMitigation =
-      0;
-
-    for (
-      let i =
-        formationIndex + 1;
-      i < candles.length;
-      i++
-    ) {
-      const candle =
-        candles[i];
-
-      let mitigation =
-        0;
-
-      if (
-        candle.low < high &&
-        candle.low > low
-      ) {
-        mitigation =
-          ((high -
-            candle.low) /
-            size) *
-          100;
-      }
-
-      if (
-        candle.high > low &&
-        candle.high < high
-      ) {
-        mitigation =
-          ((candle.high -
-            low) /
-            size) *
-          100;
-      }
-
-      if (
-        candle.low <= low ||
-        candle.high >= high
-      ) {
-        mitigation = 100;
-      }
-
-      maximumMitigation =
-        Math.max(
-          maximumMitigation,
-          mitigation
-        );
-    }
-
-    return Math.round(
-      this.clamp(
-        maximumMitigation,
-        0,
-        100
-      )
-    );
+    // Do not round a nearly filled gap up to fully mitigated.
+    return Math.floor(maximum * 100) / 100;
   }
 
   private static calculateFVGStrength(

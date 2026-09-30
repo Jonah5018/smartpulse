@@ -1,3 +1,5 @@
+import type { CandleInterval } from "@/lib/market";
+import type { MarketStructureAnalysis } from "@/lib/market-structure";
 import {
   MarketStructureService,
 } from "@/lib/market-structure";
@@ -8,13 +10,13 @@ import type {
 
 type TraderAnalysisProfile = {
   timeframes: {
-    context: Parameters<typeof MarketStructureService.current>[1];
-    structure: Parameters<typeof MarketStructureService.current>[1];
-    execution: Parameters<typeof MarketStructureService.current>[1];
+    context: CandleInterval;
+    structure: CandleInterval;
+    execution: CandleInterval;
   };
 };
 
-type AnalysisTimeframe = "5min" | "15min" | "1h" | "4h";
+type AnalysisTimeframe = CandleInterval;
 
 type TimeframeMarketState = {
   timeframe: AnalysisTimeframe;
@@ -36,38 +38,26 @@ type TimeframeMarketState = {
 export class MultiTimeframeAnalyzer {
   static async analyze(
     symbol: string,
-    profile: TraderAnalysisProfile
+    profile: TraderAnalysisProfile,
+    prepared?: Partial<Record<CandleInterval, MarketStructureAnalysis>>
   ): Promise<MultiTimeframeAnalysis> {
-    const [
-      h4Analysis,
-      contextAnalysis,
-      structureAnalysis,
-      executionAnalysis,
-   ] = await Promise.all([
-      MarketStructureService.current(
-        symbol,
-        "4h",
-        200
-    ),
+    const timeframes: CandleInterval[] = [
+      "4h",
+      profile.timeframes.context,
+      profile.timeframes.structure,
+      profile.timeframes.execution,
+    ];
+    const unique = [...new Set(timeframes)];
+    const analyses = new Map(
+      await Promise.all(unique.map(async timeframe => [
+        timeframe,
+        prepared?.[timeframe] ??
+          await MarketStructureService.current(symbol, timeframe, 200),
+      ] as const))
+    );
+    const [h4Analysis, contextAnalysis, structureAnalysis, executionAnalysis] =
+      timeframes.map(timeframe => analyses.get(timeframe)!);
 
-      MarketStructureService.current(
-        symbol,
-        profile.timeframes.context,
-        200
-   ),
-
-      MarketStructureService.current(
-        symbol,
-        profile.timeframes.structure,
-        200
-   ),
-
-      MarketStructureService.current(
-        symbol,
-        profile.timeframes.execution,
-        200
-   ),
-]);
 
     const context =
       this.toTimeframeState(
@@ -94,7 +84,7 @@ export class MultiTimeframeAnalyzer {
       );
 
     const directionalBias =
-      this.determineDirectionalBias(
+      context.timeframe === "1day" && context.trend !== "range" ? context.trend : this.determineDirectionalBias(
         h4.trend,
         context.trend,
         structure.trend,
@@ -150,7 +140,7 @@ export class MultiTimeframeAnalyzer {
 
       directionalBias,
 
-      alignment: alignment as MultiTimeframeAnalysis["alignment"],
+      alignment,
 
       confidence,
 
@@ -169,12 +159,7 @@ export class MultiTimeframeAnalyzer {
     >
   ): TimeframeMarketState {
     return {
-      timeframe:
-        timeframe === "1min" || timeframe === "30min"
-          ? "15min"
-          : timeframe === "2h" || timeframe === "8h" || timeframe === "1day"
-            ? "4h"
-            : timeframe ?? "1h",
+      timeframe: timeframe ?? "1h",
 
       trend:
         analysis.trend,
@@ -495,7 +480,7 @@ export class MultiTimeframeAnalyzer {
       directionalBias ===
       "bullish"
         ? "bullish"
-        : "bearish";
+        : directionalBias === "bearish" ? "bearish" : "neutral";
 
     if (
       directionalBias ===
@@ -503,7 +488,7 @@ export class MultiTimeframeAnalyzer {
     ) {
       return (
         `H4 ${h4.trend} institutional structure. ` +
-        `${structure.timeframe} confirms ${biasLabel} direction, ` +
+        `${structure.timeframe} does not establish a directional edge, ` +
         `while ${execution.timeframe} is used for execution alignment.`
      );
     }

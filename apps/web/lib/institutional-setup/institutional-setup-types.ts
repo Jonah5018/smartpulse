@@ -1,3 +1,4 @@
+import type { PriceActionAnalysis } from "@/lib/price-action/price-action-types";
 import type {
   LiquidityMap,
 } from "@/lib/institutional/liquidity";
@@ -56,6 +57,9 @@ export interface RiskRewardPlan {
 }
 
 export interface InstitutionalSetup {
+  /** Absent only on legacy snapshots or unavailable/closed markets. */
+  priceAction?: PriceActionAnalysis;
+
   symbol: string;
 
   timeframe: string;

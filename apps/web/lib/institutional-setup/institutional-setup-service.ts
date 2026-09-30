@@ -1,3 +1,5 @@
+import { normalizeMarketSymbol } from "@/lib/market/market-universe";
+
 import type {
   CandleInterval,
 } from "@/lib/market";
@@ -50,7 +52,7 @@ export class InstitutionalSetupService {
     profile?: TraderAnalysisProfile
   ): Promise<InstitutionalSetup> {
     const normalizedSymbol =
-      symbol.trim().toUpperCase();
+      normalizeMarketSymbol(symbol);
 
     if (!normalizedSymbol) {
       throw new Error(

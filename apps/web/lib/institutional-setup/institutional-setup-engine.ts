@@ -1,22 +1,13 @@
+import { MarketDataError } from "@/lib/providers/market-data";
+import { findInstrument, normalizeMarketSymbol } from "@/lib/market/market-universe";
+import { loadAnalysisContext } from "./analysis-context";
+import { MultiTimeframeAnalyzer } from "@/lib/multi-timeframe/multi-timeframe-analyzer";
+import { ImbalanceService } from "@/lib/imbalance/imbalance-service";
+import { PriceActionEngine } from "@/lib/price-action/price-action-engine";
+
 import type {
   CandleInterval,
 } from "@/lib/market";
-
-import {
-  MarketRepository,
-} from "@/lib/repositories/market/market-repository";
-
-import {
-  MarketStructureService,
-} from "@/lib/market-structure";
-
-import {
-  ImbalanceEngine,
-} from "@/lib/imbalance";
-
-import {
-  MultiTimeframeEngine,
-} from "@/lib/multi-timeframe";
 
 import type {
   MultiTimeframeAnalysis,
@@ -54,10 +45,6 @@ import type {
 import {
   MarketAvailabilityService,
 } from "@/lib/market-session/market-availability-service";
-
-import {
-  MSSEngine,
-} from "@/lib/institutional/mss";
 
 import {
   OrderBlockEngine,
@@ -122,12 +109,16 @@ export class InstitutionalSetupEngine {
     profile?: TraderAnalysisProfile
   ): Promise<InstitutionalSetup> {
     const normalizedSymbol =
-      symbol.trim().toUpperCase();
+      normalizeMarketSymbol(symbol);
 
     if (!normalizedSymbol) {
       throw new Error(
         "Market symbol is required."
       );
+    }
+
+    if (!findInstrument(normalizedSymbol)?.enabled) {
+      throw new MarketDataError("Unsupported or unavailable instrument.", { retryable: false });
     }
 
     const analysisProfile =
@@ -152,19 +143,19 @@ export class InstitutionalSetupEngine {
     const executionTimeframe =
       analysisProfile.timeframes.execution;
 
-    const candles =
-      await MarketRepository.getCandles(
-        symbol,
+    const context = await loadAnalysisContext(
+      normalizedSymbol,
+      [
+        "4h",
+        analysisProfile.timeframes.context,
+        analysisProfile.timeframes.structure,
         executionTimeframe,
-        outputsize
-      );
+      ],
+      outputsize
+    );
+    const execution = context[executionTimeframe]!;
+    const { candles, structure: executionStructure } = execution;
 
-    const executionStructure =
-      await MarketStructureService.current(
-        symbol,
-        executionTimeframe,
-        outputsize
-      );
 
     const displacement =
       DisplacementEngine.analyze(
@@ -184,27 +175,32 @@ export class InstitutionalSetupEngine {
         executionStructure
  );
 
-    const [
+    const internalLiquidity = LiquidityEngine.analyze(candles, executionStructure);
+    const externalLiquidity = LiquidityEngine.analyze(candles, execution.external);
+    const liquidity = {
+      ...internalLiquidity,
+      nearestBuySide: externalLiquidity.nearestBuySide,
+      nearestSellSide: externalLiquidity.nearestSellSide,
+    };
+    const imbalance = ImbalanceService.analyze(candles, executionTimeframe);
+    const prepared = Object.fromEntries(
+      Object.entries(context).map(([key, value]) => [key, value!.structure])
+    );
+    const multiTimeframe = await MultiTimeframeAnalyzer.analyze(
+      normalizedSymbol,
+      analysisProfile,
+      prepared
+    );
+    const priceAction = PriceActionEngine.analyze({
+      execution,
+      context,
+      multiTimeframe,
       liquidity,
       imbalance,
-      multiTimeframe,
-    ] = await Promise.all([
-      LiquidityEngine.analyze(
-        candles,
-        executionStructure,
-      ),
+      displacement,
+      premiumDiscount,
+    });
 
-      ImbalanceEngine.current(
-        symbol,
-        executionTimeframe,
-        outputsize
-      ),
-
-      MultiTimeframeEngine.current(
-        symbol,
-        analysisProfile
-      ),
-    ]);
 
     const latestCandle =
       candles[candles.length - 1];
@@ -247,9 +243,7 @@ export class InstitutionalSetupEngine {
           )
         : null;
 
-    const displacementDirection =
-      imbalance.displacement
-        ?.direction ?? null;
+    const displacementDirection = displacement.direction;
 
     /*
      * Evaluate whether the liquidity and
@@ -288,14 +282,24 @@ export class InstitutionalSetupEngine {
 
     const confluence =
       ConfluenceEngine.evaluate(
-        executionStructure as unknown as Parameters<
-          typeof ConfluenceEngine.evaluate
-        >[0],
+        executionStructure,
         liquidity,
         orderBlock,
         selectedFVG,
         premiumDiscount,
-        displacement
+        displacement,
+        {
+          direction,
+          conflict: priceAction.conflicts.length > 0,
+          zoneUsable: orderBlock.detected && orderBlock.direction === displacement.direction &&
+            priceAction.zones.some(zone =>
+              zone.timeframe === executionTimeframe && zone.status !== "mitigated" && zone.retests <= 1 &&
+              orderBlock.high !== null && orderBlock.low !== null &&
+              zone.low <= orderBlock.high && zone.high >= orderBlock.low &&
+              (direction === "buy" ? zone.kind === "demand" : zone.kind === "supply")
+            ),
+          breakoutConfirmed: priceAction.breakout.state === "confirmed",
+        }
       );
 
     const entryZone =
@@ -352,8 +356,12 @@ export class InstitutionalSetupEngine {
       ExecutionReadinessService.evaluate(
         confluence,
         selectedFVG !== null,
-        riskReward !== null,
-        directionalAlignment
+        riskReward !== null && riskReward.ratio >= 2,
+        directionalAlignment &&
+          priceAction.conflicts.length === 0 &&
+          priceAction.state !== "no_trade" &&
+          priceAction.state !== "insufficient_data" &&
+          priceAction.state !== "invalid_setup"
     );
 
     const state =
@@ -389,14 +397,17 @@ export class InstitutionalSetupEngine {
         displacement
    );
 
-    const summary =
-      explanationModel.headline;
+    explanationModel.narrative = priceAction.narrative;
+    explanationModel.warnings = [...explanationModel.warnings, ...priceAction.conflicts];
+
+    const summary = explanationModel.headline;
 
     const explanation =
       explanationModel.narrative;
 
     return {
-      symbol,
+      symbol: normalizedSymbol,
+      priceAction,
 
       timeframe:
         executionTimeframe,
@@ -436,15 +447,9 @@ export class InstitutionalSetupEngine {
       executionTimeframe,
 
       multiTimeframeAlignment:
-        multiTimeframe.context.trend ===
-          "range"
-          ? "range_context"
-          : multiTimeframe.alignment ===
-              "strong" ||
-            multiTimeframe.alignment ===
-              "moderate"
-            ? "aligned"
-            : "partially_aligned",
+        multiTimeframe.alignment === "countertrend" ? "countertrend"
+          : multiTimeframe.alignment === "aligned" || multiTimeframe.alignment === "strong" ? "aligned"
+          : multiTimeframe.context.trend === "range" ? "range_context" : "partially_aligned",
 
       liquidity: liquidityMap,
 
@@ -664,7 +669,7 @@ export class InstitutionalSetupEngine {
 
     return (
       sweepAligned &&
-      displacementAligned
+      displacementAligned && multiTimeframeAlignment !== "countertrend"
     );
   }
 
@@ -697,7 +702,7 @@ export class InstitutionalSetupEngine {
         (gap) =>
           gap.direction ===
             desiredDirection &&
-          !gap.isMitigated
+          !gap.isMitigated && gap.mitigationPercent < 100 && gap.strength >= 60
       );
 
     if (

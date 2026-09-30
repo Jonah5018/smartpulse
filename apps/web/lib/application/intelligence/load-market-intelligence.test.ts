@@ -594,9 +594,7 @@ describe(
 
         expect(
           InstitutionalSetupService.current
-        ).toHaveBeenCalledTimes(
-          4
-        );
+        ).toHaveBeenCalledTimes(3);
       }
     );
 
@@ -617,9 +615,7 @@ describe(
 
         expect(
           InstitutionalSetupService.current
-        ).toHaveBeenCalledTimes(
-          8
-        );
+        ).toHaveBeenCalledTimes(4);
       }
     );
 

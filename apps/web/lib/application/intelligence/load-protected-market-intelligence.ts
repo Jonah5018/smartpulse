@@ -6,12 +6,22 @@ import {
   LoadMarketIntelligence,
 } from "./load-market-intelligence";
 
+import { canAccessMarket } from "@/lib/billing/market-access";
+import { MarketDataError } from "@/lib/providers/market-data";
+
 export class LoadProtectedMarketIntelligence {
   static async execute(
     symbol: string,
     watchlist: string[] = []
   ) {
-    await requireProAccess();
+    const entitlement = await requireProAccess();
+
+    if (!canAccessMarket(entitlement.effectivePlan, symbol)) {
+      throw new MarketDataError("This instrument is unavailable for the current plan.", {
+        status: 403,
+        retryable: false,
+      });
+    }
 
     return await LoadMarketIntelligence.execute(
       symbol,

@@ -28,13 +28,14 @@ describe("dashboard market availability", () => {
     expect(result.quotes).toEqual([]);
     expect(result.topFocus).not.toBeNull();
   });
-  it("does not fetch live opportunities while the market is closed", async () => {
+  it("continues crypto analysis while Forex is closed", async () => {
     vi.setSystemTime(new Date("2026-09-19T12:00:00Z"));
+    vi.mocked(MarketRepository.getQuotes).mockResolvedValue([{ symbol: "BTC/USD", name: "Bitcoin", price: 60000, changePercent: 1, bid: null, ask: null, timestamp: new Date().toISOString() }]);
     const result = await LoadMarketPulse.execute();
     expect(result.session.isOpen).toBe(false);
-    expect(result.dataStatus.available).toBe(false);
-    expect(result.topFocus).toBeNull();
-    expect(MarketScannerService.current).not.toHaveBeenCalled();
-    expect(MarketRepository.getQuotes).not.toHaveBeenCalled();
+    expect(result.dataStatus.available).toBe(true);
+    expect(result.pulse.isLive).toBe(true);
+    expect(MarketScannerService.current).toHaveBeenCalledOnce();
+    expect(vi.mocked(MarketRepository.getQuotes).mock.calls[0][0].sort()).toEqual(["BTC/USD", "ETH/USD"]);
   });
 });

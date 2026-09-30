@@ -1,3 +1,4 @@
+import { scheduledScanSymbols } from "./scan-schedule";
 import {
   getActiveMarketUniverse,
 } from "@/lib/market/market-universe";
@@ -5,10 +6,6 @@ import {
 import {
   MarketRepository,
 } from "@/lib/repositories/market";
-
-import {
-  MarketSessionService,
-} from "@/lib/market-session";
 
 import {
   MarketScanner,
@@ -21,19 +18,8 @@ import type {
 export class MarketScannerService {
   static async current():
     Promise<MarketScanResult[]> {
-    const session =
-      MarketSessionService.current();
-
-    /*
-     * Do not scan or request live quotes when
-     * the market is closed.
-     */
-    if (!session.isOpen) {
-      return [];
-    }
-
-    const universe =
-      getActiveMarketUniverse();
+    const scheduled = new Set(scheduledScanSymbols());
+    const universe = getActiveMarketUniverse().filter(instrument => scheduled.has(instrument.symbol));
 
     if (
       universe.length === 0
@@ -66,7 +52,7 @@ export class MarketScannerService {
       );
 
     const inputs =
-      universe.map(
+      universe.filter(market => quoteMap.has(market.symbol)).map(
         (market) => ({
           symbol:
             market.symbol,

@@ -1,3 +1,5 @@
+import { findInstrument } from "@/lib/market/market-universe";
+
 import type {
   CandleInterval,
   MarketCandle,
@@ -84,13 +86,15 @@ export class TwelveDataProvider {
 
     url.searchParams.set(
       "symbol",
-      symbols.join(",")
+      symbols.map(symbol => this.providerSymbol(symbol)).join(",")
     );
 
     url.searchParams.set(
       "apikey",
       apiKey
     );
+
+    url.searchParams.set("timezone", "UTC");
 
     try {
       const response =
@@ -134,8 +138,12 @@ export class TwelveDataProvider {
     interval: CandleInterval,
     outputsize: number = 200
   ): Promise<MarketCandle[]> {
-    const apiKey =
-      this.getApiKey();
+    const apiKey = this.getApiKey();
+    symbol = findInstrument(symbol)?.symbol ?? symbol;
+
+    if (!["1min", "5min", "15min", "30min", "1h", "2h", "4h", "8h", "1day"].includes(interval)) {
+      throw new MarketDataError("Unsupported timeframe.", { provider: "twelve-data" });
+    }
 
     if (
       !Number.isInteger(
@@ -156,7 +164,7 @@ export class TwelveDataProvider {
 
     url.searchParams.set(
       "symbol",
-      symbol
+      this.providerSymbol(symbol)
     );
 
     url.searchParams.set(
@@ -232,6 +240,29 @@ export class TwelveDataProvider {
         `Unable to load ${interval} candle data for ${symbol}.`
       );
     }
+  }
+
+  private static providerSymbol(value: string): string {
+    const instrument = findInstrument(value);
+    const mapped = instrument?.providerSymbols.twelveData;
+
+    if (!instrument?.enabled || !mapped) {
+      throw new MarketDataError("Unsupported or unavailable instrument.", { provider: "twelve-data" });
+    }
+
+    return mapped;
+  }
+
+  private static utcTimestamp(value: string): string {
+    const normalized = value.includes("T") ? value : value.replace(" ", "T");
+    const utc = /(?:Z|[+-][0-9]{2}:[0-9]{2})$/.test(normalized) ? normalized : normalized + "Z";
+    const milliseconds = Date.parse(utc);
+
+    if (!Number.isFinite(milliseconds)) {
+      throw new MarketDataError("Invalid market-data timestamp.", { provider: "twelve-data" });
+    }
+
+    return new Date(milliseconds).toISOString();
   }
 
   /**
@@ -336,68 +367,27 @@ export class TwelveDataProvider {
   private static parseQuotes(
     data: TwelveDataQuoteResponse
   ): LiveMarketQuote[] {
-    return Object.values(data)
-      .filter(
-        (
-          value
-        ): value is TwelveDataQuote =>
-          this.isQuote(value)
-      )
-      .map(
-        (quote) => {
-          const price =
-            this.toNumber(
-              quote.close
-            );
+    const values = this.isQuote(data) ? [data] : Object.values(data);
 
-          const changePercent =
-            this.toNumber(
-              quote.percent_change
-            );
+    return values.filter(value => this.isQuote(value)).map(quote => {
+      const price = this.toNumber(quote.close);
+      const changePercent = this.toNumber(quote.percent_change);
+      const instrument = findInstrument(quote.symbol ?? "");
 
-          if (
-            price === null
-          ) {
-            throw new Error(
-              `Invalid price returned for ${
-                quote.symbol ??
-                "unknown symbol"
-              }.`
-            );
-          }
+      if (!instrument || price === null || price <= 0 || changePercent === null || !quote.datetime) {
+        throw new MarketDataError("Malformed market quote.", { provider: "twelve-data" });
+      }
 
-          return {
-            symbol:
-              quote.symbol ??
-              "UNKNOWN",
-
-            name:
-              quote.name ??
-              quote.symbol ??
-              "Unknown Instrument",
-
-            /*
-             * The current Twelve Data
-             * quote endpoint does not provide
-             * a genuine executable bid/ask pair.
-             *
-             * Do not fabricate these values.
-             */
-            bid: null,
-
-            ask: null,
-
-            price,
-
-            changePercent:
-              changePercent ?? 0,
-
-            timestamp:
-              quote.datetime ??
-              new Date().toISOString(),
-          };
-        }
-      );
+      return {
+        symbol: instrument.symbol,
+        name: quote.name ?? instrument.name,
+        bid: null,
+        ask: null,
+        price,
+        changePercent,
+        timestamp: this.utcTimestamp(quote.datetime),
+      };
+    });
   }
 
   /**
@@ -455,6 +445,7 @@ export class TwelveDataProvider {
           }
 
           if (
+            low <= 0 ||
             high < low ||
             open < low ||
             open > high ||
@@ -472,7 +463,7 @@ export class TwelveDataProvider {
             interval,
 
             timestamp:
-              candle.datetime,
+              this.utcTimestamp(candle.datetime),
 
             open,
 
@@ -493,7 +484,13 @@ export class TwelveDataProvider {
       );
     }
 
-    return candles;
+    const ordered = candles.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+
+    if (ordered.some((candle, index) => index > 0 && candle.timestamp === ordered[index - 1].timestamp)) {
+      throw new MarketDataError("Duplicate candle timestamps.", { provider: "twelve-data" });
+    }
+
+    return ordered;
   }
 
   /**
@@ -536,7 +533,7 @@ export class TwelveDataProvider {
       | undefined
   ): number | null {
     if (
-      value === undefined
+      value === undefined || value === null || (typeof value === "string" && value.trim() === "")
     ) {
       return null;
     }
