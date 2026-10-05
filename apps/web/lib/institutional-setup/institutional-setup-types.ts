@@ -59,6 +59,7 @@ export interface RiskRewardPlan {
 export interface InstitutionalSetup {
   /** Absent only on legacy snapshots or unavailable/closed markets. */
   priceAction?: PriceActionAnalysis;
+  chartCandles?: import("@/lib/market").MarketCandle[];
 
   symbol: string;
 

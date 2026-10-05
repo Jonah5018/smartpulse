@@ -408,6 +408,7 @@ export class InstitutionalSetupEngine {
     return {
       symbol: normalizedSymbol,
       priceAction,
+      chartCandles: candles.slice(-200),
 
       timeframe:
         executionTimeframe,

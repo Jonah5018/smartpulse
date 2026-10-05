@@ -1,3 +1,4 @@
+import { parseAccounting, type TradeAccounting } from "./accounting";
 import { normalizeMarketSymbol } from "@/lib/market/market-universe";
 import type { AITradeJournal } from "@/lib/trade-journal";
 
@@ -7,10 +8,12 @@ export interface SavedJournalEntry {
   id: string; user_id: string; symbol: string; direction: "buy" | "sell";
   status: EntryStatus; timeframe: string; trade_date: string;
   entry_price: number | null; stop_loss: number | null; take_profit: number | null; exit_price: number | null;
+  execution_mode?: "manual" | "paper";
+  accounting?: TradeAccounting | null;
   notes: string; lesson: string; snapshot: JournalSnapshot | null;
   archived: boolean; created_at: string; updated_at: string;
 }
-export type EntryInput = Pick<SavedJournalEntry, "symbol" | "direction" | "status" | "timeframe" | "trade_date" | "entry_price" | "stop_loss" | "take_profit" | "exit_price" | "notes" | "lesson">;
+export type EntryInput = Pick<SavedJournalEntry, "symbol" | "direction" | "status" | "timeframe" | "trade_date" | "entry_price" | "stop_loss" | "take_profit" | "exit_price" | "notes" | "lesson" | "accounting">;
 export type FormState = { error?: string; success?: string };
 
 export function parseEntry(form: FormData): EntryInput {
@@ -39,7 +42,15 @@ export function parseEntry(form: FormData): EntryInput {
   if (entry_price !== null && take_profit !== null && (direction === "buy" ? take_profit <= entry_price : take_profit >= entry_price)) throw new Error("The target must be above a Buy entry or below a Sell entry.");
   const notes = text("notes"), lesson = text("lesson");
   if (notes.length > 5000 || lesson.length > 3000) throw new Error("Keep notes under 5,000 characters and lessons under 3,000.");
-  return { symbol, direction, status, timeframe, trade_date, entry_price, stop_loss, take_profit, exit_price, notes, lesson };
+  const accounting = form.has("accounting_present") ? parseAccounting(form) : undefined;
+  if (accounting && status === "planned") throw new Error("Execution accounting is for open or closed trades.");
+  if (accounting && accounting.exits.length && status === "closed") {
+    const exited = accounting.exits.reduce((s,e)=>s+e.quantity,0);
+    const average = accounting.exits.reduce((s,e)=>s+e.quantity*e.price,0)/exited;
+    if (Math.abs(exited-accounting.quantity)>accounting.quantity*1e-9) throw new Error("A closed trade must exit its full quantity.");
+    if (exit_price === null || Math.abs(average-exit_price)>Math.max(1e-8,average*1e-8)) throw new Error("Exit price must match the weighted average of partial exits: "+average);
+  }
+  return { symbol, direction, status, timeframe, trade_date, entry_price, stop_loss, take_profit, exit_price, notes, lesson, ...(accounting !== undefined ? {accounting} : {}) };
 }
 
 /** Price-based R only; excludes fees, slippage and partial exits. */

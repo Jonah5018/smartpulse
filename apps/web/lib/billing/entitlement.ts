@@ -17,7 +17,7 @@ export type EffectivePlan =
   | "none"
   | SubscriptionPlan;
 
-interface EntitlementRow {
+export interface EntitlementRow {
   id: string;
   user_id: string;
   plan: SubscriptionPlan;
@@ -138,8 +138,10 @@ export async function getEffectiveEntitlement(
     );
   }
 
-  const entitlement =
-    data as EntitlementRow | null;
+  return evaluateEntitlement(data as EntitlementRow | null);
+}
+
+export function evaluateEntitlement(entitlement: EntitlementRow | null): EffectiveEntitlement {
 
   if (!entitlement) {
     return {

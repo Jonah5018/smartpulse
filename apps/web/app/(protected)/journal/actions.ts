@@ -21,6 +21,7 @@ export async function saveEntry(id: string | null, _previous: FormState, form: F
     if (id) {
       const existing = await SavedJournalRepository.get(client, user.id, id);
       if (!existing) throw new Error("Entry not found.");
+      if(existing.execution_mode==="paper") throw new Error("Paper execution fields are managed in the Trading workspace.");
       if (existing.snapshot && existing.symbol !== input.symbol) throw new Error("An entry with saved analysis must keep its original market.");
       await SavedJournalRepository.update(client, user.id, id, input, String(form.get("updated_at") ?? ""));
     } else {

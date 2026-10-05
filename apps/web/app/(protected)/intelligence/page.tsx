@@ -1,3 +1,4 @@
+import { AnnotatedChart } from "@/components/intelligence/annotated-chart";
 import type { ReactNode } from "react";
 
 import { PriceActionCard } from "@/components/intelligence/price-action-card";
@@ -569,6 +570,7 @@ export default async function IntelligencePage({
                   </p>
                 )}
 
+                {setup.chartCandles && <AnnotatedChart key={setup.symbol + setup.chartCandles.at(-1)?.timestamp} history={setup.chartCandles} symbol={setup.symbol} />}
                 <div className="grid items-start gap-5 xl:grid-cols-[1.15fr_1fr]">
                   <ExecutionChecklistCard
                     setup={setup}
